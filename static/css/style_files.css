@@ -1,0 +1,50 @@
+.center {
+    text-align: center;
+}
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-rows: repeat(auto);
+    gap: 10px;
+    max-width: 600px;
+    margin: 20px auto;
+}
+
+.grid-container button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
+    /* ВАЖНО: разрешаем перенос текста */
+    white-space: normal;        /* текст может переноситься */
+    word-break: break-word;     /* длинные слова разбиваем */
+    overflow-wrap: break-word;  /* переносим при необходимости */
+    
+    /* Размеры */
+    width: 100%;
+    min-height: 120px;
+    padding: 15px 8px;
+    
+    /* Внешний вид */
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.grid-container button span {
+    /* Текст внутри кнопки */
+    max-width: 100%;
+    font-size: 18px;
+    line-height: 1.4;           /* межстрочный интервал */
+    
+    /* Перенос */
+    display: block;
+    white-space: normal;
+    word-break: break-word;
+}
+.grid-container button:hover {
+    background-color: #45a049;
+}
