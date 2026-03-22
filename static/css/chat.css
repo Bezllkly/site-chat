@@ -24,6 +24,8 @@
     box-sizing: border-box;
 }
 body {
+  user-select: none;
+  -webkit-user-select: none;
   background-color: gray;
   padding: 0px;
   margin: 0;
@@ -32,6 +34,8 @@ body {
 }
 
 .title {
+    user-select: all;
+    -webkit-user-select: all;
     display: flex;
     padding: 5px;
     width: 100%;
@@ -45,6 +49,7 @@ body {
 
 .title div {
     display: flex;
+    justify-content: center;
 }
 
 .title div a {
@@ -57,6 +62,8 @@ body {
 }
 
 .image-icon {
+    user-select: none;
+    -webkit-user-select: none;
     width: 100%;
     height: auto;
     max-width: 40px;
@@ -70,11 +77,20 @@ body {
 }
 
 .text {
+    user-select: text;
+    -webkit-user-select: text;
     color: rgb(0, 0, 0);
     font-size: clamp(1.2rem, 3vw, 4em);
     text-align: center;
 }
-
+#user_name {
+    user-select: text;
+    -webkit-user-select: text;
+    justify-self: center;
+    align-self: center;
+    margin-right: 10px;
+    color: #cb2ceb;
+}
 .main {
     display: flex;
     height: calc(100vh - 7vh);
@@ -95,10 +111,10 @@ body {
 }
 .chat {
     width: 100%;
+    min-width: 100px;
     background-image: url(https://img.freepik.com/premim-photo/abstract-colorful-bent-paper-background-design_851755-6183.jpg?semt=ais_hybrid&w=740&q=80);
     background-size: cover;
     flex: 1;
-    overflow-y: auto;
 }
 
 @media (max-width: 600px) {
@@ -145,7 +161,6 @@ body {
     align-items: center;
     background-color: #cacaca;
     width: 100%;
-    margin-right: 1px;
     height: 50px;
     border: none;
     border-top: 2px solid black;
@@ -180,6 +195,8 @@ body {
     border: none;
     border-radius: 20px;
     border-bottom: 3px solid black;
+    font-size: 1.3rem;
+    padding: 10px;
 }
 .input-div input:hover {
     background-color: #e2e2e2;
@@ -208,10 +225,16 @@ body {
 
 .dialog {
     display: flex;
+    width: 100%;
+    height: max-content;
+    max-height: 90%;
     flex-direction: column;
     justify-content: space-between;
     padding: 10px;
+    padding-bottom: 100px;
     gap: 10px;
+    overflow-y: scroll;
+    white-space: nowrap;
 }
 .dialog .message {
     justify-items: end;
@@ -225,27 +248,104 @@ body {
     border-radius: 20px;
 }
 .dialog .message h4 {
+    user-select: text;
+    -webkit-user-select: text;
     font-weight: 500;
-    word-wrap: break-word;      /* Перенос длинных слов */
-    overflow-wrap: break-word;  /* Современный аналог */
+    word-wrap: break-word;      
+    overflow-wrap: break-word;  
     white-space: normal;
     max-width: 100%;
+    margin-left: 1px;
+    margin-right: 1px;
+}
+.mess-state {
+    display: flex;
+    width: 100%;
+    height: max-content;
+    align-items: center;
+}
+.mess-state h6 {
+    width: max-content;
+    margin-bottom: 1px;
+    margin-left: 10px;
+    margin-right: 5px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.mess-state img {
+    display: inline;
+    width: 18px;
+    height: 18px;
+    align-self: center;
 }
 .dialog .capture {
+    width: max-content;
+    max-width: 80%;
+    background-color: #cacaca;
+    border: none;
+    border-radius: 20px;
+    padding-left: 1px;
+    padding-right: 1px;
+    padding-top: 1px;
+}
+.dialog-img {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    height: 100%;
+    justify-self: center;
+    border: none;
+    border-radius: 20px;
+}
+.dialog .capture h4 {
+    user-select: text;
+    -webkit-user-select: text;
+    font-weight: 500;
+    word-wrap: break-word;      
+    overflow-wrap: break-word;  
+    white-space: normal;
+    max-width: 100%;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+.dialog .file {
     width: max-content;
     max-width: 50%;
     background-color: #cacaca;
     border: none;
     border-radius: 20px;
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 5px;
+    border-bottom: 2px solid #000000;
 }
-.dialog .capture img {
-    display: block;
-    width: 150px;
-    height: 150px;
-    justify-self: center;
-    border: none;
-    border-radius: 20px;
+.dialog .file .dialog-file {
+    display: flex;
+    padding: 5px;
+    gap: 5px;
+    background-color: #adadad;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border: 2px solid #7c7b7b;
+    align-items: center;
+}
+.dialog .file .dialog-file img {
+    width: 30px;
+    height: 30px;
+}
+.dialog-file div {
+    width: 60%;
+    display: flex;
+    justify-content: space-around;
+}
+.dialog-file div span {
+    font-size: 14px;
+    font-weight: 100;
+}
+.file h4 {
+    user-select: text;
+    -webkit-user-select: text;
+    font-weight: 100;
+    margin-left: 5px;
+    margin-right: 5px;
+    word-wrap: break-word;      
+    overflow-wrap: break-word;  
+    white-space: normal;
 }
