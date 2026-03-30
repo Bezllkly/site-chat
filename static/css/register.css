@@ -3,35 +3,116 @@
     padding: 0;
     box-sizing: border-box;
 }
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #c2c2c2;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c2c2c2;
+    border-radius: 1px;
+}
+
 body {
-  background-color: #b1b1b1;
+  background-color: #cacaca;
   padding: 0px;
   margin: 0;
   font-family: "Comic Sans MS", sans-serif;
+  overflow: scroll;
+}
+.title {
+    position: fixed;
+    display: flex;
+    margin: 10px;
+    background-color: #3a7dcb;
+    padding: 5px;
+    gap: 5px;
+    border-radius: 10px;
+    align-items: center;
+    cursor: pointer;
+}
+.title img {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+}
+.title span {
+    font-size: 26px;
+}
+.back {
+    position: fixed;
+    right: 0;
+    margin: 10px;
+    cursor: pointer;
+}
+.back button {
+    display: flex;
+    border: none;
+    border-radius: 10px;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    gap: 5px;
+    cursor: pointer;
+}
+.back img {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+}
+#text-back {
+    display: none;
+    visibility: hidden;
+    font-size: 20px;
 }
 .container {
     position: fixed;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    background-color: hsl(212, 58%, 51%);
+    background-color: #3a7dcb;
     display: flex;
     flex-direction: column;
     width: 70%;
     min-width: 300px;
     max-width: 500px;
-    height: 55%;
+    height: 60%;
     justify-content: center;     /* Горизонтальное центрирование */
     align-items: center;  
     gap: 10px;
     border-radius: 40px;;
 }
-.container input {
-    width: 50%;
+.container div {
+    display: flex;
+    align-content: center;
+    background-color: #cacaca;
+    border-radius: 10px;
+    border-bottom: 3px solid black;
+}
+.container div span {
+    font-size: 25px;
+}
+.container #username {
+    width: 90%;
     min-width: 200px;
     height: 35px;
     font-size: 1.3rem;
-    background-color: rgb(175, 175, 175);
+    background-color: #cacaca;
+    border: none;
+    
+    text-align: center;
+}
+.container #password {
+    width: 50%;
+    min-width: 270px;
+    height: 35px;
+    font-size: 1.3rem;
+    background-color: #cacaca;
     border: none;
     border-radius: 10px;
     border-bottom: 3px solid black;
@@ -39,7 +120,6 @@ body {
 }
 .container input:focus {
     background-color: #c7c7c7;
-    border-bottom: none;
 }
 .container button {
     width: 30%;
@@ -55,4 +135,81 @@ body {
 .container button:hover {
     background-color: #51f9ff;
     border-bottom: 1px solid black;
+}
+.container button:active {
+    background-color: #ad33cc;
+}
+#error-login {
+    word-wrap: break-word;      
+    overflow-wrap: break-word;  
+    white-space: normal;
+    display: none;
+    font-size: 17px;
+    font-weight: 700;
+    color: red;
+}
+.joke {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+}
+.joke button {
+    background-color: red;
+    position: static;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2000px;
+    margin-bottom: 10px;
+    padding: 10px;
+    gap: 10px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+}
+.joke button img {
+    width: 50px;
+    height: 50px;
+}
+.joke button span {
+    font-size: 20px;
+    font-weight: 900;
+    color: black;
+}
+.loading {
+    position: fixed;
+    top: 1px;
+    width: 100%;
+    height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+.loading div {
+    width: max-content;
+    height: max-content;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+    background-color: #cacaca;
+    padding: 15px;
+    gap: 10px;
+}
+.loading div img {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    background: none;
+}
+.loading div span {
+    margin: 10px;
+    display: inline-block;
+    width: 100px;
+    font-size: 30px;
+    align-self: center;
+    justify-self: center;
+    user-select: none;
+    -webkit-user-select: none;
 }

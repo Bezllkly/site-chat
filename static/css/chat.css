@@ -164,15 +164,19 @@ body {
     height: 50px;
     border: none;
     border-top: 2px solid black;
+    padding: 5px;
+    z-index: 1000; 
 }
 .chat-bar div {
     display: flex;
     gap: 10px;
     align-items: center;
+    cursor: pointer;
 }
 .chat-bar img {
     width: 40px;
     height: 40px;
+    cursor: pointer;
 }
 .chat-bar span {
     font-size: 30px;
@@ -182,9 +186,16 @@ body {
     position: fixed;
     width: 60%;
     max-width: 600px;
-    height: 50px;
+    height: auto;
     bottom: 5%;
     margin-left: 5%;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 5px;
+
+    z-index: 1000; 
+}
+.input-div div {
     display: flex;
     gap: 5px;
 }
@@ -197,30 +208,93 @@ body {
     border-bottom: 3px solid black;
     font-size: 1.3rem;
     padding: 10px;
+    align-self: center;
+    cursor: text;
 }
 .input-div input:hover {
     background-color: #e2e2e2;
-    border: none;
 }
 .input-div input:focus {
     background-color: #ffffff;
-    border-bottom: none;
 }
 .input-div button {
     background-color: #cacaca;
-    height: 100%;
+    height: 50px;
     width: 50px;
     border: none;
     border-bottom: 3px solid #000000;
     border-radius: 50px;
+    cursor: pointer;
 }
 .input-div button:hover {
     background-color: #e2e2e2;
-    border: none;
 }
 .input-div button img {
     width: 30px;
     height: 30px;
+}
+.attach {
+    background-color: #c2c2c2;
+    width: max-content;
+    min-width: 60%;
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    grid-auto-flow: row;
+    align-items: center;
+    padding: 5px;
+    gap: 5px;
+    border-radius: 10px;
+    border-bottom: 3px solid #000000;
+}
+.attach .attach-file {
+    background-color: #adadad;
+    display: flex;
+    width: max-content;
+    height: 95%;
+    align-items: center;
+    padding: 5px;
+    gap: 5px;
+    border-radius: 10px;
+    border-bottom: 2px solid #000000;
+    margin-left: 5px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+.attach .attach-file:hover {
+    background-color: #e2e2e2;
+}
+.attach .attach-file img {
+    width: 30px;
+    height: 30px;
+}
+.attach .attach-file h4 {
+    font-weight: 100;
+}
+.attach .attach-file span {
+    font-size: 14px;
+}
+.attach .attach-cap {
+    width: 100px;
+    height: 95%;
+    cursor: pointer;
+}
+.attach .attach-cap img {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    border-bottom: 2px solid black;
+}
+.attach .attach-manage {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.attach .attach-manage img {
+    width: 15px;
+    height: 15px;
+    background-color: #bdbdbd;
+    border-radius: 10px;
+    cursor: pointer;
 }
 
 .dialog {
@@ -314,7 +388,6 @@ body {
     background-color: #cacaca;
     border: none;
     border-radius: 20px;
-    border-bottom: 2px solid #000000;
 }
 .dialog .file .dialog-file {
     display: flex;
@@ -326,7 +399,7 @@ body {
     border: 2px solid #7c7b7b;
     align-items: center;
 }
-.dialog .file .dialog-file img {
+.dialog-file img {
     width: 30px;
     height: 30px;
 }
@@ -348,4 +421,51 @@ body {
     word-wrap: break-word;      
     overflow-wrap: break-word;  
     white-space: normal;
+}
+.video {
+    width: 80%;
+    max-width: 300px;
+    background-color: #cacaca;
+    border-radius: 20px;
+}
+.video .dialog-video {
+    width: 100%;
+    position: relative;
+    display: inline-block;
+    padding: 2px;
+}
+.video .dialog-video button {
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+.video .dialog-video .dialog-video-img {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 10px;
+}
+.video .dialog-video .dialog-video-pause {
+    position: absolute;
+    top: 50%;                  /* центр по вертикали */
+    left: 50%;                 /* центр по горизонтали */
+    transform: translate(-50%, -50%); /* точное центрирование */
+    width: 15%; 
+    max-width: 300px;
+}
+.video .dialog-video span {
+    position: absolute;
+    word-wrap: break-word;      
+    overflow-wrap: break-word;  
+    white-space: normal;
+    bottom: 1%;
+    right: 0%;
+    background-color: #cacaca;
+    padding: 1px;
+    font-weight: 600;
+}
+.video h4 {
+    font-weight: 100;
+    margin-left: 5px;
 }
