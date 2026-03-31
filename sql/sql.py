@@ -53,7 +53,7 @@ chat_members = Table(
     Column('chat_id', ForeignKey('chats.id'), primary_key=True),
     Column('user_id', ForeignKey('users.id'), primary_key=True),
     Column('role', Enum(Chat_roles), default=Chat_roles.member),  # 'owner', 'admin', 'member'
-    Column('joined_at', DateTime, default=datetime.now(timezone.utc))
+    Column('joined_at', DateTime, default=datetime.utcnow()  )
 )
 
 class User(Base):
@@ -67,8 +67,8 @@ class User(Base):
     avatar = Column(String(100), nullable=True)
 
     is_active = mapped_column(Boolean, default=True)
-    last_seen = mapped_column(DateTime, default=datetime.now(timezone.utc))
-    created_at = mapped_column(DateTime, default=datetime.now(timezone.utc))
+    last_seen = mapped_column(DateTime, default=datetime.utcnow()  )
+    created_at = mapped_column(DateTime, default=datetime.utcnow()  )
 
     chats = relationship("Chat", secondary=chat_members, back_populates="members")
     chatsadmin = relationship('Chat', back_populates='creator', cascade="all, delete-orphan")
@@ -80,10 +80,10 @@ class Session(Base):
 
     id = Column(Integer, primary_key=True)
     token = Column(String(64), unique=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
 
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    expires_at = Column(DateTime, default=datetime.now(timezone.utc) + timedelta(days=30), onupdate=datetime.now(timezone.utc) + timedelta(days=30))
+    created_at = Column(DateTime, default=datetime.utcnow()  )
+    expires_at = Column(DateTime, default=datetime.utcnow()   + timedelta(days=30), onupdate=datetime.utcnow()   + timedelta(days=30))
     user_agent = Column(String(255), nullable=True)
     ip_address = Column(String(15), nullable=True) 
     user = relationship('User', back_populates='sessions')
@@ -100,12 +100,13 @@ class Chat(Base):
     __tablename__ = 'chats'
 
     id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer, unique=True)
     username = Column(Integer, unique=True)
     type = Column(Enum(Chat_type), default=Chat_type.private)
     title = Column(String(50), nullable=True)
     description = Column(String(200), nullable=True)
-    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow()  )
     avatar = Column(String(100), nullable=True)
 
     creator = relationship('User', back_populates='chatsadmin', foreign_keys=[created_by])
@@ -117,10 +118,10 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True)
     chat_id = Column(Integer, ForeignKey('chats.id', ondelete='CASCADE'), index=True)
-    created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), index=True)
+    created_by = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.utcnow()  )
+    updated_at = Column(DateTime, default=datetime.utcnow()  , onupdate=datetime.utcnow()  )
     text = Column(String, nullable=True)
     attachment_type = Column(Enum(Attach_type), nullable=True)
     attachment = Column(String, nullable=True)

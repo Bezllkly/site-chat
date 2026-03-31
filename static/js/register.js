@@ -49,14 +49,15 @@ join.onclick = async function() {
     }
 
     const data = {
-        user: username_input,
+        username: username_input,
         password: password_input
     }
+    console.log(data)
     username.value = "";
     password.value = "";
 
     try {
-        const response = await fetch(window.location.origin+"/api/registration", {
+        const response = await fetch(window.location.origin+"/chat/api/registration", {
             method: "POST",
             headers: {
                 "Content-type": "application/json"
@@ -72,7 +73,7 @@ join.onclick = async function() {
             return;
         } else if (!result.ok) {
             loading.style.display = "none";
-            error_login.textContent = "Something wrong";
+            error_login.textContent = result.detail;
             error_login.style.display = "flex";
             return;
         }

@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
     <title>Chats</title>
 </head>
 <body>
     <header class="title">
         <div>
             <a href="/" id="title">
-                <img class="image-icon" src="img/favicon.ico" title="menu">
+                <img class="image-icon" src="/static/img/favicon.ico" title="menu">
                 <span class="text">Mini-chat</span>
             </a>
         </div>
         <div>
             <span id="user_name">Your_name</span>
             <a href="/settings" id="settings">
-                <img class="image-icon" src="img/settings.png" title="settings">
+                <img class="image-icon" src="/static/img/settings.png" title="settings">
             </a>
         </div>
     </header>
 
     <section class="main">
-        <div class="list_of_chats">
+        <div id="list-of-chats" class="list_of_chats">
             <button title=".">
                 <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
                 <div>
@@ -39,94 +39,8 @@
                     <span>long description</span>
                 </div>
             </button>
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button>
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button>
         </div>
-        <div class="chat">
+        <div id="chat" class="chat">
             <div class="chat-bar">
                     <div>
                         <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
@@ -138,7 +52,10 @@
             <div class="input-div">
                 <div>
                     <input type="text" id="input" placeholder="Message">
-                    <button title="attachment">
+                    <button id="minimize" title="minimize" style="display: none;">
+                        <img src="https://cdn-icons-png.flaticon.com/128/7787/7787505.png" title="minimize">
+                    </button>
+                    <button id="attach" title="attachment">
                         <img src="https://cdn-icons-png.flaticon.com/128/9941/9941021.png" title="attachment">
                     </button>
                     <button title="send" id="send">
@@ -212,6 +129,6 @@
             </div>
         </div>
     </section>
-    <script src="js/chat.js"></script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>
