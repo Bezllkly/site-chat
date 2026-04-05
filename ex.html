@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example</title>
+</head>
+<body>
+    <button id="button" title="button">Нажми</button>
+    <div id="output">output</div>
+    <script>
+        const button = document.getElementById('button');
+        const output = document.getElementById('output');
+
+        button.onclick = async function() {
+            let data = {chat_id: 47069923}
+            let response = await fetch('/chat/api/get_messages', {
+                method: "POST",
+                headers: {
+                    "Content-type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            json = await response.json()
+            output.textContent = "ok:"+json.ok+"\n"+json.detail
+        }
+    </script>
+</body>
+</html>

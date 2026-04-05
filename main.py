@@ -31,8 +31,13 @@ app.mount("/lol", StaticFiles(directory="files"), name="file")
 
 @app.get('/favicon.ico')
 async def favicon():
-    return FileResponse("static/img/favicon.ico", media_type="image/x-icon")
+    return FileResponse(os.path.join("static", "img", "favicon.ico"), media_type="image/x-icon")
+
+@app.get('/ex')
+async def ex():
+    return FileResponse(os.path.join('ex.html'))
 
 # Запуск приложения
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=1234, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=1234
+                , reload=True)

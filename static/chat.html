@@ -7,6 +7,41 @@
     <title>Chats</title>
 </head>
 <body>
+    <div id="create-chat-background">
+        <div id="create-chat-window">
+            <div id="chat-title">
+                <h2>New chat</h2>
+                <img id="create-chat-window-close" src="https://cdn-icons-png.flaticon.com/128/2976/2976286.png" title="close">
+            </div>
+            <div id="chat-name">
+                <img id="chat-img" src="https://cdn-icons-png.flaticon.com/128/3524/3524388.png" title="create_chat">
+                <input type="file" id="photoinput" accept="image/*" aria-label="dk">
+                <input class="delete-chstatus" type="text" aria-label="h" placeholder="Chat name" id="chatname-input">
+            </div>
+            <div id="chat-type">
+                <div>
+                    <h3>What is this?</h3>
+                    <select class="delete-chstatus" id="chattype-select" name="chattype-select" title="chattype-select">
+                        <option value="group">Group</option>
+                        <option value="channel">Channel</option>
+                    </select>
+                </div>
+                <div>
+                    <h3>Chat's username</h3>
+                    @<input class="delete-chstatus" type="text" id="chatusername-input" placeholder="Chat's username">
+                </div>
+            </div>
+            <div id="chat-desc">
+                <h3>Chat's description</h3>
+                <textarea class="delete-chstatus" id="chatdesc-input" rows="4" cols="50" placeholder="Something about your chat"></textarea>
+            </div>
+            <div id="chat-submit">
+                <span id="create-chat-status"></span>
+                <button id="chatcreate">Create</button>
+            </div>
+        </div>
+    </div>
+
     <header class="title">
         <div>
             <a href="/" id="title">
@@ -24,6 +59,9 @@
 
     <section class="main">
         <div id="list-of-chats" class="list_of_chats">
+            <button id="create-chat">
+                <img src="https://cdn-icons-png.flaticon.com/128/10103/10103630.png" title="create">
+            </button>
             <button title=".">
                 <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
                 <div>
@@ -62,7 +100,7 @@
                         <img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" title="send">
                     </button>
                 </div>
-                <div class="attach">
+                <div id="attach-menu" class="attach">
                     <div class="attach-manage">
                         <img src="https://cdn-icons-png.flaticon.com/128/6057/6057365.png" title="minimize">
                         <img src="https://cdn-icons-png.flaticon.com/512/2976/2976286.png" title="close">
@@ -81,7 +119,7 @@
                 </div>
             </div>
 
-            <div class="dialog">
+            <div id="dialog" class="dialog">
                 <div class="message">
                     <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
                     <div style="justify-content: end;" class="mess-state">
@@ -114,11 +152,10 @@
                 </div>
                 <div class="video">
                     <div class="dialog-video">
-                        <button>
-                            <img class="dialog-video-img" src="https://i.pinimg.com/474x/46/a6/61/46a661dbb1d4c71d9a992030b56aab20.jpg?nii=t" title="video">
-                            <img class="dialog-video-pause" src="https://cdn-icons-png.flaticon.com/512/5577/5577228.png" title="pause">
-                            <span>01:23</span>
-                        </button>
+                        <video controls width="640" height="360">
+                            <source src="/files/f/%D0%BE%D0%BF%D0%B5%D0%BD%D0%B8%D0%BD%D0%B3%201.mp4" type="video/mp4">
+                            Ваш браузер не поддерживает тег video.
+                        </video>
                     </div>
                     <h4>4k Video</h4>
                     <div class="mess-state">
@@ -129,6 +166,6 @@
             </div>
         </div>
     </section>
-    <script src="/static/js/chat.js"></script>
+    <script src="static/js/chat.js"></script>
 </body>
 </html>

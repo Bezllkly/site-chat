@@ -5,7 +5,7 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, Boolean, DateTi
 from datetime import datetime, timedelta, timezone
 import enum
 from dotenv import load_dotenv
-import os, asyncio
+import os, asyncio, shutil
 
 load_dotenv()
 DB_LINK = os.getenv('DBLINK')
@@ -47,33 +47,25 @@ class Base(DeclarativeBase):
                 cols.append(f'{col}={getattr(self, col)}')
         return f'<{self.__class__.__name__} {','.join(cols)}>'
     
-chat_members = Table(
-    'chat_members',
-    Base.metadata,
-    Column('chat_id', ForeignKey('chats.id'), primary_key=True),
-    Column('user_id', ForeignKey('users.id'), primary_key=True),
-    Column('role', Enum(Chat_roles), default=Chat_roles.member),  # 'owner', 'admin', 'member'
-    Column('joined_at', DateTime, default=datetime.utcnow()  )
-)
-
 class User(Base):
     __tablename__ = 'users'
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(unique=True)
-    username: Mapped[str] = mapped_column(unique=True)
-    name: Mapped[str] = mapped_column()
-    password: Mapped[str] = mapped_column()
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, unique=True)
+    username = Column(String(30), unique=True)
+    name = Column(String(20))
+    password = Column(String(100))
     avatar = Column(String(100), nullable=True)
 
-    is_active = mapped_column(Boolean, default=True)
-    last_seen = mapped_column(DateTime, default=datetime.utcnow()  )
-    created_at = mapped_column(DateTime, default=datetime.utcnow()  )
+    is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
-    chats = relationship("Chat", secondary=chat_members, back_populates="members")
     chatsadmin = relationship('Chat', back_populates='creator', cascade="all, delete-orphan")
     messages = relationship("Message", back_populates='user')
     sessions = relationship("Session", back_populates='user', cascade="all, delete-orphan")
+    chats = relationship("ChatMember", back_populates='user', cascade='all, delete-orphan')
+    files = relationship("File", back_populates='user')
 
 class Session(Base):
     __tablename__ = 'sessions'
@@ -81,9 +73,12 @@ class Session(Base):
     id = Column(Integer, primary_key=True)
     token = Column(String(64), unique=True)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    last_visit_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    country = Column(String(10))
+    region = Column(String(20))
 
-    created_at = Column(DateTime, default=datetime.utcnow()  )
-    expires_at = Column(DateTime, default=datetime.utcnow()   + timedelta(days=30), onupdate=datetime.utcnow()   + timedelta(days=30))
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
+    expires_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)   + timedelta(days=30), onupdate=datetime.now(timezone.utc)   + timedelta(days=30))
     user_agent = Column(String(255), nullable=True)
     ip_address = Column(String(15), nullable=True) 
     user = relationship('User', back_populates='sessions')
@@ -96,22 +91,38 @@ class Username(Base):
     owner_type = Column(Enum(Chat_type), default=Chat_type.private)
     owner_id = Column(Integer, unique=True)
 
+class ChatMember(Base):
+    __tablename__ = 'chat_members'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'))
+    chat_id = Column(Integer, ForeignKey('chats.chat_id'))
+
+    last_read_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    role = Column(Enum(Chat_roles), default=Chat_roles.member)
+
+    user = relationship('User', back_populates='chats', foreign_keys=[user_id])
+    chat = relationship("Chat", back_populates='members', foreign_keys=[chat_id])
+    files = relationship('File', back_populates='chatmember')
+
 class Chat(Base):
     __tablename__ = 'chats'
 
     id = Column(Integer, primary_key=True)
     chat_id = Column(Integer, unique=True)
-    username = Column(Integer, unique=True)
+    username = Column(String(30), unique=True)
     type = Column(Enum(Chat_type), default=Chat_type.private)
-    title = Column(String(50), nullable=True)
+    title = Column(String(50))
     description = Column(String(200), nullable=True)
     created_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow()  )
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
     avatar = Column(String(100), nullable=True)
+    last_message = Column(String(50), nullable=True)
 
     creator = relationship('User', back_populates='chatsadmin', foreign_keys=[created_by])
-    members = relationship('User', secondary=chat_members, back_populates='chats')
+    members = relationship('ChatMember', back_populates='chat')
     messages = relationship('Message', back_populates='chat', cascade="all, delete-orphan" )
+    files = relationship("File", back_populates='chat')
 
 class Message(Base):
     __tablename__ = 'messages'
@@ -120,12 +131,12 @@ class Message(Base):
     chat_id = Column(Integer, ForeignKey('chats.id', ondelete='CASCADE'), index=True)
     created_by = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow()  )
-    updated_at = Column(DateTime, default=datetime.utcnow()  , onupdate=datetime.utcnow()  )
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  , onupdate=datetime.now(timezone.utc)  )
     text = Column(String, nullable=True)
     attachment_type = Column(Enum(Attach_type), nullable=True)
     attachment = Column(String, nullable=True)
-    state = Column(Enum(Mess_state), default=Mess_state.sent)
+    state = Column(Enum(Mess_state), nullable=True)
     viewed_by = Column(ARRAY(Integer), default=[])
     count_viewed = Column(Integer, default=1)
 
@@ -134,7 +145,23 @@ class Message(Base):
     reply_to = relationship('Message', remote_side=[id], foreign_keys=[reply_to_id])
     replies = relationship('Message', back_populates='reply_to')
 
+class File(Base):
+    __tablename__ = "files"
 
+    id = Column(Integer, primary_key=True)
+    chatmember_id = Column(Integer, ForeignKey('chat_members.id'))
+    user_id = Column(Integer, ForeignKey('users.user_id'))
+    chat_id = Column(Integer, ForeignKey("chats.chat_id"))
+    file_path = Column(String(255), unique=True)
+    file_name = Column(String(255))
+    file_origname = Column(String(255))
+    file_type = Column(String(20))
+    file_size = Column(Integer) #kilobytes
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates='files', foreign_keys=[user_id])
+    chat = relationship("Chat", back_populates='files', foreign_keys=[chat_id])
+    chatmember = relationship('ChatMember', back_populates='files', foreign_keys=[chatmember_id])
 
 '''
 UPDARE DATABASES
@@ -144,6 +171,10 @@ async def update_all():
         await con.run_sync(Base.metadata.drop_all)
         await con.run_sync(Base.metadata.create_all)
         await con.commit()
+    try:
+        shutil.rmtree(os.path.join('attach_files'))
+    except:
+        pass
     print('updated succesfully')
 
 if __name__ == "__main__":

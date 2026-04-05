@@ -34,6 +34,11 @@ username.onclick = function() {
 password.onclick = function() {
     error_login.style.display = "none";
 }
+const title = document.getElementById('title');
+
+title.onclick = function() {
+    window.location.href = "/chat"
+}
 
 join.onclick = async function() {
     error_login.style.display = "none";
