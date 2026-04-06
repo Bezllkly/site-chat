@@ -49,8 +49,12 @@
                 <span class="text">Mini-chat</span>
             </a>
         </div>
+        <div id="search-div">
+            <input type="text" id="search-input" placeholder="search">
+            <img id="search-img" src="https://cdn-icons-png.flaticon.com/128/151/151773.png" title="search">
+        </div>
         <div>
-            <span id="user_name">Your_name</span>
+            <span id="user-name">Your_name</span>
             <a href="/settings" id="settings">
                 <img class="image-icon" src="/static/img/settings.png" title="settings">
             </a>
@@ -58,10 +62,10 @@
     </header>
 
     <section class="main">
-        <div id="list-of-chats" class="list_of_chats">
-            <button id="create-chat">
+        <button id="create-chat">
                 <img src="https://cdn-icons-png.flaticon.com/128/10103/10103630.png" title="create">
-            </button>
+        </button>
+        <div id="list-of-chats" class="list_of_chats">
             <button title=".">
                 <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
                 <div>
@@ -79,7 +83,7 @@
             </button>
         </div>
         <div id="chat" class="chat">
-            <div class="chat-bar">
+            <div id="chat-bar" class="chat-bar">
                     <div>
                         <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
                         <span>Chat_name</span>
@@ -87,7 +91,7 @@
                     <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/2311/2311524.png" title="more">
             </div>
 
-            <div class="input-div">
+            <div id="input-div" class="input-div">
                 <div>
                     <input type="text" id="input" placeholder="Message">
                     <button id="minimize" title="minimize" style="display: none;">

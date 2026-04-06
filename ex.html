@@ -13,8 +13,8 @@
         const output = document.getElementById('output');
 
         button.onclick = async function() {
-            let data = {chat_id: 47069923}
-            let response = await fetch('/chat/api/get_messages', {
+            let data = {last_sync_at: new Date()}
+            let response = await fetch('/chat/api/update', {
                 method: "POST",
                 headers: {
                     "Content-type": "application/json"
@@ -23,6 +23,7 @@
             })
             json = await response.json()
             output.textContent = "ok:"+json.ok+"\n"+json.detail
+            console.log(json.detail);
         }
     </script>
 </body>

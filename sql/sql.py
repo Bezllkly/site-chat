@@ -98,6 +98,7 @@ class ChatMember(Base):
     user_id = Column(Integer, ForeignKey('users.user_id'))
     chat_id = Column(Integer, ForeignKey('chats.chat_id'))
 
+    joined_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     last_read_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     role = Column(Enum(Chat_roles), default=Chat_roles.member)
 
@@ -117,12 +118,15 @@ class Chat(Base):
     created_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
     avatar = Column(String(100), nullable=True)
-    last_message = Column(String(50), nullable=True)
+    last_message_id = Column(Integer, nullable=True)
+    last_message_content = Column(String(50), nullable=True)
 
     creator = relationship('User', back_populates='chatsadmin', foreign_keys=[created_by])
     members = relationship('ChatMember', back_populates='chat')
     messages = relationship('Message', back_populates='chat', cascade="all, delete-orphan" )
     files = relationship("File", back_populates='chat')
+
+
 
 class Message(Base):
     __tablename__ = 'messages'
