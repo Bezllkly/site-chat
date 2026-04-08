@@ -33,6 +33,8 @@ class Post_chat(BaseModel):
 
 class Post_search(BaseModel):
     content: str
+    type_content: Optional[str]
+    ids_chats: Optional[list]
 
 class Update(BaseModel):
     last_sync_at: str
@@ -332,15 +334,29 @@ async def search(search: Post_search, session = Cookie(default=None)):
         return {'ok': False, 'detail': 'Not authorized'}
     if not search.content:
         return {'ok': False, 'detail': 'Content is none'}
+    if search.type_content and not search.ids_chats:
+        return {'ok': False, 'detail': 'Wrong request'}
+    users_db = []
+    chats_db = []
+    print(search.ids_chats)
     
     async with sql.as_session() as as_session:
         session_db = (await as_session.execute(select(sql.Session).filter_by(token=session))).scalar_one_or_none()
         if not session_db or session_db.expires_at < datetime.now(timezone.utc):
             return {'ok': False, 'detail': 'Session is expired'}
-        users_db = (await as_session.execute(select(sql.User).filter(or_(sql.User.username.ilike(f'%{search.content}%'),
-                                                                      sql.User.name.ilike(f'%{search.content}%'))).limit(10))).scalars().all()
-        chats_db = (await as_session.execute(select(sql.Chat).filter(or_(sql.Chat.title.ilike(f'%{search.content}%'),
-                                                                      sql.Chat.username.ilike(f'%{search.content}%'))).limit(10))).scalars().all()
+        if search.type_content:
+            if search.type_content == 'private':
+                users_db = (await as_session.execute(select(sql.User).filter(or_(sql.User.username.ilike(f'%{search.content}%'),
+                                                                              sql.User.name.ilike(f'%{search.content}%'))).where(sql.User.user_id.not_in(search.ids_chats)).limit(5))).scalars().all()
+            else:
+                print('yes')
+                chats_db = (await as_session.execute(select(sql.Chat).filter(or_(sql.Chat.title.ilike(f'%{search.content}%'),
+                                                                              sql.Chat.username.ilike(f'%{search.content}%'))).where(sql.Chat.chat_id.not_in(search.ids_chats)).limit(5))).scalars().all()
+        else:
+            users_db = (await as_session.execute(select(sql.User).filter(or_(sql.User.username.ilike(f'%{search.content}%'),
+                                                                          sql.User.name.ilike(f'%{search.content}%'))).limit(5))).scalars().all()
+            chats_db = (await as_session.execute(select(sql.Chat).filter(or_(sql.Chat.title.ilike(f'%{search.content}%'),
+                                                                          sql.Chat.username.ilike(f'%{search.content}%'))).limit(5))).scalars().all()
         users = []
         chats = []
         for user in users_db:
@@ -350,6 +366,7 @@ async def search(search: Post_search, session = Cookie(default=None)):
             print({'user_id': user.user_id, 'username': user.username, 'name': user.name, 'avatar': user.avatar})
         for chat in chats_db:
             chats.append({'type': chat.type, 'chat_id': chat.chat_id, 'username': chat.username, 'title': chat.title, 'avatar': chat.avatar})
+        print({'ok': True, 'detail': {'users': users, 'chats': chats}})
         return {'ok': True, 'detail': {'users': users, 'chats': chats}}
         
 @router.get('/api/get_myself')

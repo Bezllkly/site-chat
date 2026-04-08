@@ -63,7 +63,7 @@ body {
 .image-icon {
     user-select: none;
     -webkit-user-select: none;
-    width: 100%;
+    width: 100px;
     height: auto;
     max-width: 40px;
     max-height: 40px;
@@ -83,6 +83,7 @@ body {
     text-align: center;
 }
 #user-name {
+    font-size: 20px;
     user-select: text;
     -webkit-user-select: text;
     justify-self: center;
@@ -91,11 +92,12 @@ body {
     color: #cb2ceb;
 }
 #search-div {
+    min-width: 200px;
     width: 20%;
     display: flex;
     background-color: white;
     border-radius: 10px;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
 }
 #search-input {

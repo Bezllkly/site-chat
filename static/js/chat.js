@@ -2,7 +2,7 @@ let all_chats = {} /* key - chat_id, value - json*/
 let all_chats_ids = [] /* chats id */
 let all_private_chats = {} /* key - chat_id, value - json*/
 let all_private_chats_ids = [] /* chats id */
-let search_chats = {} /* keys - users, chats. value - them lists */
+let search_chats = [] /* keys - users, chats. value - them lists */
 let is_searching = false;
 
 const chat_el = document.getElementById('chat');
@@ -25,6 +25,18 @@ class Dialog {
         chat.style.display = 'inline';
         chat_bar.style.display = 'flex';
         input_div.style.display = 'flex';
+
+        this.clear_dialog();
+        const chat_bar_back = document.getElementById('chat-bar-back');
+        if (window.innerWidth > 600) {
+            chat_bar_back.style.display = 'none';
+        }
+    }
+    clear_dialog() {
+        const dialog = document.getElementById('dialog');
+        while (dialog.firstChild) {
+            dialog.removeChild(dialog.firstChild);
+        }
     }
     create_message(text, is_me = true, time) {
         const message = document.createElement("div");
@@ -107,8 +119,6 @@ class Dialog {
 const list_of_chats = document.getElementById('list-of-chats');
 class Chat {
     append_chat(type, chat_id, title, username=null, avatar=null, element_before=null) {
-        console.log(chat_id, title, username, avatar);
-
         const chat = document.createElement('button');
         chat.style.id = chat_id;
         const img = document.createElement('img');
@@ -142,6 +152,11 @@ class Chat {
         div.appendChild(span);
         chat.appendChild(img);
         chat.appendChild(div);
+
+        chat.onclick = function() {
+            const dialog = new Dialog();
+            dialog.open_dialog(chat_id);
+        }
         
         if (element_before) {
             list_of_chats.insertBefore(chat, element_before);
@@ -249,24 +264,51 @@ class Chat {
     show_more(type) {
         const title = document.createElement('div');
         title.id = String(list_of_chats.children.length);
-        title.onclick = () => {
+        title.onclick = async () => {
+            console.log(search_chats, type);
             const last_el = list_of_chats.children[title.id-1];
-            const div = list_of_chats.lastChild;
-            username = div.lastChild;
-            console.log()
-            console.log('title:'+title+"\nlol"+title.id);
-            if (type == 'user') {
-                const index = search_chats.users.indexOf(last_el);
-                for (let json of search_chats.users.slice(index)) {
-                    this.append_chat(chat_id=json.chat_id, title=json.title, avatar=json.avatar, last_mess=json.last_mess, element_before=title);
+            
+            const data = {content: search_input.value, type_content: type, ids_chats: search_chats};
+
+            const response = await fetch('/chat/api/search', {
+                method: "POST",
+                headers: {
+                    "Content-type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            json = await response.json()
+            if (!json.ok) {
+                this.create_text(text=json.detail);
+                return;
+            }
+            is_searching = true;
+            if (json.detail.users.length >= 5) {
+                for (let user of json.detail.users.slice(0, 5)) {
+                    this.append_chat('private', user.user_id, user.name, '@'+user.username, user.avatar, title);
+                    search_chats.push(user.user_id);
                 }
+                this.show_more(type='users');
             } else {
-                console.log("qqqqq\n" + last_el);
-                const index = search_chats.chats.indexOf(last_el);
-                for (let json of search_chats.chats.slice(index)) {
-                    this.append_chat(type, json.chat_id, json.title, '@'+json.last_mess, json.avatar, title);
+                for (let user of json.detail.users) {
+                    this.append_chat('private', user.user_id, user.name, '@'+user.username, user.avatar, title);
+                    search_chats.push(user.user_id);
                 }
             }
+
+            if (json.detail.chats.length >= 5) {
+                for (let one_chat of json.detail.chats.slice(0, 5)) {
+                    this.append_chat(one_chat.type, one_chat.chat_id, one_chat.title, '@'+one_chat.username, one_chat.avatar, title);
+                    search_chats.push(one_chat.chat_id);
+                }
+            this.show_more(type='chats');
+            } else {
+                for (let one_chat of json.detail.chats) {
+                    this.append_chat(one_chat.type, one_chat.chat_id, one_chat.title, '@'+one_chat.username, one_chat.avatar, title);
+                    search_chats.push(one_chat.chat_id);
+                }
+            }
+        
             title.style.display = 'none';
         }
 
@@ -331,7 +373,6 @@ chatcreate.onclick = async function() {
     const chatdesc_input = document.getElementById('chatdesc-input');
 
     if (!chatname_input.value | !chatusername_input.value) {
-        console.log('heloo hdjshi');
         create_chat_status.style.display = 'flex';
         create_chat_status.textContent = "Enter chat name and username";
         return;
@@ -386,8 +427,8 @@ search_img.onclick = async function() {
     if (!search_input.value) {
         return;
     }
-    search_chats = {};
-    const data = {content: search_input.value}
+    search_chats = [];
+    const data = {content: search_input.value, type_content: null, ids_chats: null};
     const response = await fetch('/chat/api/search', {
         method: "POST",
         headers: {
@@ -397,26 +438,26 @@ search_img.onclick = async function() {
     })
     json = await response.json()
     if (!json.ok) {
-        const chat = Chat();
+        const chat = new Chat();
         chat.delete_all();
         chat.title();
         chat.create_text(text=json.detail);
         return;
     }
     is_searching = true;
-    search_chats = json.detail;
     const chat = new Chat();
     chat.delete_all();
     chat.title();
-    if (json.detail.users.length > 5) {
+    if (json.detail.users.length >= 5) {
         for (let user of json.detail.users.slice(0, 5)) {
             chat.append_chat(type='private', chat_id=user.user_id, title=user.name, username='@'+user.username, avatar=user.avatar);
+            search_chats.push(user.user_id);
         }
         chat.show_more(type='users');
     } else {
         for (let user of json.detail.users) {
             chat.append_chat(type='private', chat_id=user.user_id, title=user.name, username='@'+user.username, avatar=user.avatar);
-            console.log(user.user_id, user.name, user.username, user.avatar, 'pgfpfgfpgo');
+            search_chats.push(user.user_id);
         }
     }
 
@@ -424,14 +465,16 @@ search_img.onclick = async function() {
 
 
     
-    if (json.detail.chats.length > 5) {
+    if (json.detail.chats.length >= 5) {
         for (let one_chat of json.detail.chats.slice(0, 5)) {
             chat.append_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username='@'+one_chat.username, avatar=one_chat.avatar);
+            search_chats.push(one_chat.chat_id);
         }
     chat.show_more(type='chats');
     } else {
         for (let one_chat of json.detail.chats) {
             chat.append_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username='@'+one_chat.username, avatar=one_chat.avatar);
+            search_chats.push(one_chat.chat_id);
         }
     }
 }
@@ -489,6 +532,10 @@ async function auto_update() {
         if (json.ok) {
             const your_name = document.getElementById('user-name');
             your_name.textContent = json.detail.name;
+            const settings = document.getElementById('settings');
+            if (json.avatar) {
+                settings.src = '/chat/api/avatar/'+json.detail.avatar;
+            }
         }
     } catch (error) {
         console.log(error);
