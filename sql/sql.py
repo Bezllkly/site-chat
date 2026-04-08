@@ -66,6 +66,8 @@ class User(Base):
     sessions = relationship("Session", back_populates='user', cascade="all, delete-orphan")
     chats = relationship("ChatMember", back_populates='user', cascade='all, delete-orphan')
     files = relationship("File", back_populates='user')
+    private_chats1 = relationship('Private_Chat', foreign_keys=lambda: Private_Chat.user1_id, back_populates='user1')
+    private_chats2 = relationship('Private_Chat', foreign_keys=lambda: Private_Chat.user2_id, back_populates='user2')
 
 class Session(Base):
     __tablename__ = 'sessions'
@@ -119,20 +121,34 @@ class Chat(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
     avatar = Column(String(100), nullable=True)
     last_message_id = Column(Integer, nullable=True)
-    last_message_content = Column(String(50), nullable=True)
+    last_message_content = Column(String(10), nullable=True)
 
     creator = relationship('User', back_populates='chatsadmin', foreign_keys=[created_by])
     members = relationship('ChatMember', back_populates='chat')
     messages = relationship('Message', back_populates='chat', cascade="all, delete-orphan" )
     files = relationship("File", back_populates='chat')
 
+class Private_Chat(Base):
+    __tablename__ = 'private_chats'
 
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer, unique=True)
+    username = Column(String(30), unique=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    last_message_id = Column(Integer, nullable=True)
+    last_message_content = Column(String(10), nullable=True)
+    user1_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)
+    user2_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)
+
+    user1 = relationship('User', back_populates='private_chats1', foreign_keys=[user1_id])
+    user2 = relationship('User', back_populates='private_chats2', foreign_keys=[user2_id])
+    messages = relationship('Message', back_populates='private_chat')
+    files = relationship('File', back_populates='private_chat')
 
 class Message(Base):
     __tablename__ = 'messages'
 
     id = Column(Integer, primary_key=True)
-    chat_id = Column(Integer, ForeignKey('chats.id', ondelete='CASCADE'), index=True)
     created_by = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
@@ -141,11 +157,14 @@ class Message(Base):
     attachment_type = Column(Enum(Attach_type), nullable=True)
     attachment = Column(String, nullable=True)
     state = Column(Enum(Mess_state), nullable=True)
-    viewed_by = Column(ARRAY(Integer), default=[])
-    count_viewed = Column(Integer, default=1)
+    is_read = Column(Boolean, default=False)
 
-    user = relationship('User', back_populates='messages', foreign_keys=[created_by])
+    chat_id = Column(Integer, ForeignKey('chats.chat_id', ondelete='CASCADE'), nullable=True)
+    private_chat_id = Column(Integer, ForeignKey('private_chats.chat_id', ondelete='CASCADE'), nullable=True)
+
     chat = relationship('Chat', back_populates='messages', foreign_keys=[chat_id])
+    private_chat = relationship('Private_Chat', back_populates='messages', foreign_keys=[private_chat_id])
+    user = relationship('User', back_populates='messages', foreign_keys=[created_by])
     reply_to = relationship('Message', remote_side=[id], foreign_keys=[reply_to_id])
     replies = relationship('Message', back_populates='reply_to')
 
@@ -155,16 +174,18 @@ class File(Base):
     id = Column(Integer, primary_key=True)
     chatmember_id = Column(Integer, ForeignKey('chat_members.id'))
     user_id = Column(Integer, ForeignKey('users.user_id'))
-    chat_id = Column(Integer, ForeignKey("chats.chat_id"))
     file_path = Column(String(255), unique=True)
     file_name = Column(String(255))
     file_origname = Column(String(255))
     file_type = Column(String(20))
     file_size = Column(Integer) #kilobytes
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    chat_id = Column(Integer, ForeignKey("chats.chat_id"), nullable=True)
+    private_chat_id = Column(Integer, ForeignKey('private_chats.chat_id'), nullable=True)
 
-    user = relationship("User", back_populates='files', foreign_keys=[user_id])
     chat = relationship("Chat", back_populates='files', foreign_keys=[chat_id])
+    private_chat = relationship('Private_Chat', back_populates='files', foreign_keys=[private_chat_id])
+    user = relationship("User", back_populates='files', foreign_keys=[user_id])
     chatmember = relationship('ChatMember', back_populates='files', foreign_keys=[chatmember_id])
 
 '''

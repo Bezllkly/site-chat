@@ -36,6 +36,8 @@ class Post_search(BaseModel):
 
 class Update(BaseModel):
     last_sync_at: str
+    all_chats_ids: list
+    all_private_chats_ids: list
 
 router = APIRouter(prefix='/chat',
                    tags=['chat'])
@@ -209,7 +211,7 @@ async def get_messages(chat: Post_chat, session: Optional[str] = Cookie(default=
                              'text': message.text,
                              'attachment_type': message.attachment_type,
                              'attachment': message.attachment,
-                             'viewed_by': message.viewed_by,
+                             'is_read': message.is_read,
                              'count_viewed': message.count_viewed})
     print(messages)
     return {'ok': True, 'detail': messages}
@@ -383,13 +385,24 @@ async def update(update_data: Update, session = Cookie(default=None)):
     async with sql.as_session() as as_session:
         chats_db = (await as_session.execute(select(sql.Chat).filter(sql.Chat.members.any(sql.ChatMember.user_id == query.user.user_id)))).scalars().all()
 
-    chats = []
+    chats = {'chats': {'joined': [], 'leaved': [], 'modified': []}, 'private_chats': {'joined': [], 'leaved': [], 'modified': []}}
+    # chats
+    db_chats_ids = [chatmemb.chat_id for chatmemb in query.user.chats if chatmemb.chat_id]
+    for chat_id in db_chats_ids:
+        if chat_id not in update_data.all_chats_ids:
+            chat = [chatmemb for chatmemb in query.user.chats if chatmemb.chat_id == chat_id][0]
+            print(chat.chat.type)
+            chat_type = "group" if chat.chat.type == sql.Chat_type.group else 'channel'
+            chats['chats']['joined'].append({'chat_id': chat.chat_id, 'chat_type': chat_type, 'avatar': chat.chat.avatar, 'title': chat.chat.title, 'last_message': chat.chat.last_message_content})
+    for chat_id in update_data.all_chats_ids:
+        if chat_id not in db_chats_ids:
+            chats['chats']['leaved'].append(chat_id)
     async with sql.as_session() as as_session:
         for chatmemb in query.user.chats:
-            messages = (await as_session.execute(select(sql.Message).filter(sql.Message.created_at > last_sync_at, sql.Message.chat_id == chatmemb.chat.chat_id)))
+            messages = (await as_session.execute(select(sql.Message).filter(sql.Message.created_at > last_sync_at, sql.Message.chat_id == chatmemb.chat.chat_id))).scalars().all()
             if not messages and chatmemb.joined_at < last_sync_at:
                 continue
-            chats.append({'chat_id': chatmemb.chat.chat_id, 'username': chatmemb.chat.username, 'chat_type': chatmemb.chat.type, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content, 'messages': messages})
+            chats['chats']['modified'].append({'chat_id': chatmemb.chat.chat_id, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content, 'count_messages': len(messages)})
     
     print(chats)
     return {'ok': True, 'detail': chats}

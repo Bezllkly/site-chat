@@ -1,17 +1,30 @@
-let all_chats = []
-let search_chats = {}
+let all_chats = {} /* key - chat_id, value - json*/
+let all_chats_ids = [] /* chats id */
+let all_private_chats = {} /* key - chat_id, value - json*/
+let all_private_chats_ids = [] /* chats id */
+let search_chats = {} /* keys - users, chats. value - them lists */
+let is_searching = false;
 
+const chat_el = document.getElementById('chat');
 const chat_bar = document.getElementById('chat-bar');
 const input_div =document.getElementById('input-div');
+chat_el.style.display = 'none';
 chat_bar.style.display = 'none';
 input_div.style.display = 'none';
 
 const attach = document.getElementById("attach-menu");
 attach.style.display = "none";
 const dialog = document.getElementById("dialog");
-class Dialog {
-    open_dialog() {
 
+
+class Dialog {
+    open_dialog(chat_id) {
+        const chat = document.getElementById('chat');
+        const chat_bar = document.getElementById('chat-bar');
+        const input_div = document.getElementById('input-div');
+        chat.style.display = 'inline';
+        chat_bar.style.display = 'flex';
+        input_div.style.display = 'flex';
     }
     create_message(text, is_me = true, time) {
         const message = document.createElement("div");
@@ -93,11 +106,11 @@ class Dialog {
 };
 const list_of_chats = document.getElementById('list-of-chats');
 class Chat {
-    create_chat(type, chat_id, title, username, avatar=null, element_before=null) {
+    append_chat(type, chat_id, title, username=null, avatar=null, element_before=null) {
         console.log(chat_id, title, username, avatar);
 
         const chat = document.createElement('button');
-        chat.id = chat_id;
+        chat.style.id = chat_id;
         const img = document.createElement('img');
         if (avatar) {
             img.src = '/chat/api/avatar/'+avatar;
@@ -112,17 +125,20 @@ class Chat {
         h2.textContent = title;
         div_type.appendChild(h2);
         const img_type = document.createElement('img');
+        img_type.classList.add('img-type');
         if (type == 'private') {
             img_type.src = 'https://cdn-icons-png.flaticon.com/128/1077/1077114.png';
         } else if (type == 'group') {
             img_type.src = 'https://cdn-icons-png.flaticon.com/128/7261/7261483.png';
-        } else if (type == 'channel') {
+        } else {
             img_type.src = 'https://cdn-icons-png.flaticon.com/128/8740/8740904.png';
         }
         div_type.appendChild(img_type);
         const span = document.createElement('span');
-        span.textContent = "@" + username;
-        div.appendChild(h2);
+        if (username) {
+            span.textContent = username;
+        }
+        div.appendChild(div_type);
         div.appendChild(span);
         chat.appendChild(img);
         chat.appendChild(div);
@@ -133,6 +149,78 @@ class Chat {
             list_of_chats.appendChild(chat);
         }
     }
+    addstart_chat(type, chat_id, title, username, avatar=null) {
+        console.log(chat_id, title, username, avatar);
+
+        const chat = document.createElement('button');
+        chat.style.id = chat_id;
+        const img = document.createElement('img');
+        if (avatar) {
+            img.src = '/chat/api/avatar/'+avatar;
+        } else {
+            img.src = 'https://cdn-icons-png.flaticon.com/128/666/666201.png';
+        }
+        img.classList.add('chat-icon');
+        const div = document.createElement('div');
+        const div_type = document.createElement('div');
+        div_type.classList.add('div-type-chat');
+        const h2 = document.createElement('h2');
+        h2.textContent = title;
+        div_type.appendChild(h2);
+        const img_type = document.createElement('img');
+        img_type.classList.add('img-type');
+        if (type == 'private') {
+            img_type.src = 'https://cdn-icons-png.flaticon.com/128/1077/1077114.png';
+        } else if (type == 'group') {
+            img_type.src = 'https://cdn-icons-png.flaticon.com/128/7261/7261483.png';
+        } else {
+            img_type.src = 'https://cdn-icons-png.flaticon.com/128/8740/8740904.png';
+        }
+        div_type.appendChild(img_type);
+        const span = document.createElement('span');
+        if (username) {
+            span.textContent = username;
+        }
+        div.appendChild(div_type);
+        div.appendChild(span);
+        chat.appendChild(img);
+        chat.appendChild(div);
+
+        chat.onclick = function() {
+            const dialog = new Dialog();
+            dialog.open_dialog(chat_id);
+        }
+        
+        list_of_chats.insertBefore(chat, list_of_chats.firstChild);
+    }
+    update_chat(chat_id, title, last_message=null, count_messages=null, avatar=null) {
+        const chat = document.getElementById(chat_id);
+        if (!chat) {
+            return;
+        }
+        if (avatar) {
+            const img = chat.firstChild;
+            img.src = avatar;
+        }
+        const div = chat.lastChild;
+        const div_title = div.firstChild;
+        const div_desc = div.lastChild;
+        div_title.textContent = title;
+        if (last_message) {
+            if (count_messages) {
+                div_desc.textContent = last_message + '(' + count_messages + ')';
+            } else {
+                div_desc.textContent = last_message;
+            }
+        }
+    }
+    delete_chat(chat_id) {
+        const chat = document.getElementById(chat_id);
+        if (!chat) {
+            return;
+        }
+        list_of_chats.removeChild(chat);
+    }
     delete_all() {
         while (list_of_chats.firstChild) {
             list_of_chats.removeChild(list_of_chats.firstChild);
@@ -142,9 +230,12 @@ class Chat {
         const title = document.createElement('div');
         title.onclick = () => {
             this.delete_all();
-            for (let chat of all_chats) {
-                this.create_chat(chat_id=chat.chat_id, title=chat.title, avatar=chat.title, chat.last_mess);
+            for (let chat_id of all_chats_ids) {
+                let chat = all_chats[chat_id];
+                console.log(chat);
+                this.append_chat(chat.chat_type, chat.chat_id, chat.title, chat.last_message, chat.avatar);
             }
+            is_searching = false;
         }
         title.classList.add('chats-list-title');
         const img = document.createElement('img');
@@ -157,17 +248,23 @@ class Chat {
     }
     show_more(type) {
         const title = document.createElement('div');
-        title.onclick = function() {
+        title.id = String(list_of_chats.children.length);
+        title.onclick = () => {
             const last_el = list_of_chats.children[title.id-1];
+            const div = list_of_chats.lastChild;
+            username = div.lastChild;
+            console.log()
+            console.log('title:'+title+"\nlol"+title.id);
             if (type == 'user') {
                 const index = search_chats.users.indexOf(last_el);
-                for (json of search_chats.users.slice(index)) {
-                    this.create_chat(chat_id=json.chat_id, title=json.title, avatar=json.avatar, last_mess=json.last_mess, element_before=title);
+                for (let json of search_chats.users.slice(index)) {
+                    this.append_chat(chat_id=json.chat_id, title=json.title, avatar=json.avatar, last_mess=json.last_mess, element_before=title);
                 }
             } else {
+                console.log("qqqqq\n" + last_el);
                 const index = search_chats.chats.indexOf(last_el);
-                for (json of search_chats.chats.slice(index)) {
-                    this.create_chat(chat_id=json.chat_id, title=json.title, avatar=json.avatar, last_mess=json.last_mess, element_before=title);
+                for (let json of search_chats.chats.slice(index)) {
+                    this.append_chat(type, json.chat_id, json.title, '@'+json.last_mess, json.avatar, title);
                 }
             }
             title.style.display = 'none';
@@ -223,7 +320,6 @@ photoinput.onchange = function(event) {
             chat_img.src = e.target.result;
         }
         reader.readAsDataURL(file);
-        formData.append('image', file);
     }
 }
 const chatcreate = document.getElementById("chatcreate");
@@ -307,18 +403,19 @@ search_img.onclick = async function() {
         chat.create_text(text=json.detail);
         return;
     }
+    is_searching = true;
     search_chats = json.detail;
     const chat = new Chat();
     chat.delete_all();
     chat.title();
     if (json.detail.users.length > 5) {
         for (let user of json.detail.users.slice(0, 5)) {
-            chat.create_chat(type='private', chat_id=user.user_id, title=user.name, username=user.username, avatar=user.avatar);
+            chat.append_chat(type='private', chat_id=user.user_id, title=user.name, username='@'+user.username, avatar=user.avatar);
         }
         chat.show_more(type='users');
     } else {
         for (let user of json.detail.users) {
-            chat.create_chat(type='private', chat_id=user.user_id, title=user.name, username=user.username, avatar=user.avatar);
+            chat.append_chat(type='private', chat_id=user.user_id, title=user.name, username='@'+user.username, avatar=user.avatar);
             console.log(user.user_id, user.name, user.username, user.avatar, 'pgfpfgfpgo');
         }
     }
@@ -329,12 +426,12 @@ search_img.onclick = async function() {
     
     if (json.detail.chats.length > 5) {
         for (let one_chat of json.detail.chats.slice(0, 5)) {
-            chat.create_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username=one_chat.username, avatar=one_chat.avatar);
+            chat.append_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username='@'+one_chat.username, avatar=one_chat.avatar);
         }
     chat.show_more(type='chats');
     } else {
         for (let one_chat of json.detail.chats) {
-            chat.create_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username=one_chat.username, avatar=one_chat.avatar);
+            chat.append_chat(type=one_chat.type, chat_id=one_chat.chat_id, title=one_chat.title, username='@'+one_chat.username, avatar=one_chat.avatar);
         }
     }
 }
@@ -342,12 +439,18 @@ search_img.onclick = async function() {
 /* MAIN DIALOG */
 
 /* auto_update */
-let last_sync_at = Date(1970);
-
+let last_sync_at = new Date(1970);
+const chat = new Chat();
+chat.delete_all();
 async function auto_update() {
+    if (is_searching) {
+        setTimeout(auto_update, 5000);
+        return;
+    }
     try {
-        let data = {last_sync_at: last_sync_at};
-        let response = await fetch('/api/update', {
+        let data = {last_sync_at: last_sync_at, all_chats_ids: all_chats_ids, all_private_chats_ids: all_private_chats_ids};
+        console.log(data);
+        let response = await fetch('/chat/api/update', {
             method: 'POST',
             headers: {
                 "Content-type": 'application/json'
@@ -356,14 +459,39 @@ async function auto_update() {
         })
         let json = await response.json();
         if (json.ok) {
-            all_chats = json;
-            last_sync_at = new Date();
-            for (chat in json.detail) {
+            last_sync_at = new Date().toISOString();
 
+            const chat = new Chat();
+            for (chat_json of json.detail.chats.joined) {
+                if (!(chat_json.chat_id in all_chats_ids)) {
+                    console.log(chat_json.chat_id);
+                    all_chats_ids.unshift(chat_json.chat_id);
+                    all_chats[chat_json.chat_id] = chat_json;
+                    chat.addstart_chat(type=chat_json.chat_type, chat_id=chat_json.chat_id, title=chat_json.title, username=chat_json.last_message, avatar=chat_json.avatar);
+                }
+            }
+            for (chat_id of json.detail.chats.leaved) {
+                if (chat_id in all_chats_ids) {
+                    all_chats_ids = all_chats_ids.filter(item => item != chat_id);
+                    delete all_chats[chat_id];
+                    chat.delete_chat(chat_id);
+                }
+            }
+            for (chat_json of json.detail.chats.modified) {
+                if (chat_json.chat_id in all_chats_ids) {
+                    chat.update_chat(chat_id=chat_json.chat_id, title=chat_json.title, last_message=chat_json.last_message, count_messages=chat_json.count_messages, avatar=chat_json.avatar);
+                }
             }
         }
-    } catch (error) {
 
+        response = await fetch('/chat/api/get_myself');
+        json = await response.json();
+        if (json.ok) {
+            const your_name = document.getElementById('user-name');
+            your_name.textContent = json.detail.name;
+        }
+    } catch (error) {
+        console.log(error);
     } finally {
         setTimeout(auto_update, 5000)
     }

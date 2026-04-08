@@ -215,7 +215,7 @@ body {
 .list_of_chats button:active {
     border-bottom: 4px solid gray;
 }
-.list_of_chats button img {
+.list_of_chats button .chat-icon {
     height: 90%;
     aspect-ratio: 1 / 1;
     border: 1px solid black;
@@ -226,6 +226,17 @@ body {
     font-size: 0.9rem;
     font-weight: 500;
 }
+.div-type-chat {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+.img-type {
+    height: 20px;
+    aspect-ratio: 1/1;
+}
+
 #create-chat {
     position: fixed;
     width: 60px;

@@ -13,7 +13,9 @@
         const output = document.getElementById('output');
 
         button.onclick = async function() {
-            let data = {last_sync_at: new Date()}
+            let data = {all_chats_ids: [],
+    all_private_chats_ids: [],
+    last_sync_at: new Date()}
             let response = await fetch('/chat/api/update', {
                 method: "POST",
                 headers: {
