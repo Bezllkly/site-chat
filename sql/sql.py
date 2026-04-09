@@ -56,6 +56,7 @@ class User(Base):
     name = Column(String(20))
     password = Column(String(100))
     avatar = Column(String(100), nullable=True)
+    description = Column(String(100), nullable=True)
 
     is_active = Column(Boolean, default=True)
     last_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
@@ -132,13 +133,11 @@ class Private_Chat(Base):
     __tablename__ = 'private_chats'
 
     id = Column(Integer, primary_key=True)
-    chat_id = Column(Integer, unique=True)
-    username = Column(String(30), unique=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     last_message_id = Column(Integer, nullable=True)
     last_message_content = Column(String(10), nullable=True)
-    user1_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)
-    user2_id = Column(Integer, ForeignKey('users.user_id'), nullable=True)
+    user1_id = Column(Integer, ForeignKey('users.user_id'))
+    user2_id = Column(Integer, ForeignKey('users.user_id'))
 
     user1 = relationship('User', back_populates='private_chats1', foreign_keys=[user1_id])
     user2 = relationship('User', back_populates='private_chats2', foreign_keys=[user2_id])
@@ -160,7 +159,7 @@ class Message(Base):
     is_read = Column(Boolean, default=False)
 
     chat_id = Column(Integer, ForeignKey('chats.chat_id', ondelete='CASCADE'), nullable=True)
-    private_chat_id = Column(Integer, ForeignKey('private_chats.chat_id', ondelete='CASCADE'), nullable=True)
+    private_chat_id = Column(Integer, ForeignKey('private_chats.id', ondelete='CASCADE'), nullable=True)
 
     chat = relationship('Chat', back_populates='messages', foreign_keys=[chat_id])
     private_chat = relationship('Private_Chat', back_populates='messages', foreign_keys=[private_chat_id])
@@ -181,7 +180,7 @@ class File(Base):
     file_size = Column(Integer) #kilobytes
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     chat_id = Column(Integer, ForeignKey("chats.chat_id"), nullable=True)
-    private_chat_id = Column(Integer, ForeignKey('private_chats.chat_id'), nullable=True)
+    private_chat_id = Column(Integer, ForeignKey('private_chats.id'), nullable=True)
 
     chat = relationship("Chat", back_populates='files', foreign_keys=[chat_id])
     private_chat = relationship('Private_Chat', back_populates='files', foreign_keys=[private_chat_id])

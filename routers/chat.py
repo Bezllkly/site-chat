@@ -36,6 +36,13 @@ class Post_search(BaseModel):
     type_content: Optional[str]
     ids_chats: Optional[list]
 
+class Post_infochat(BaseModel):
+    type: str
+    chat_id: int
+
+class Post_join(BaseModel):
+    chat_id: int
+
 class Update(BaseModel):
     last_sync_at: str
     all_chats_ids: list
@@ -165,11 +172,94 @@ async def registration(response: Response, request: Request, user: Post_Session)
         response.set_cookie(key='session', value=session_token)
         return {'ok': True, 'detail': session_token}
 
-@router.post('/api/join_chat')
-async def join_chat(session= Cookie(default=None)):
+@router.post('/api/send_mess')
+async def send_mess(session = Cookie(default=None)):
     if not session:
         return {'ok': False, 'detail': 'Not authorized'}
+    
+    user_db = (await as_session.execute(select(sql.User).filter_by(user_id=chat.chat_id).options(selectinload(sql.User.private_chats1), selectinload(sql.User.private_chats2)))).scalar_one_or_none()
+    if not user_db:
+        return {'ok': False, 'detail': 'No result'}
+    is_member = False
+    for user_id in user_db.private_chats1.user2_id:
+        if user_id == user.user_id:
+            is_member = True
+            break
+    else:
+        for user_id in user_db.private_chats2.user1_id:
+            if user_id == user.user_id:
+                is_member = True
+                break
+    if is_member:
+        return {'ok': False, 'detail': ''}
+    
+    new_privatechat = sql.Private_Chat(user1_id=user.user_id, user2_id=user_db.user_id)
+    as_session.add(new_privatechat)
 
+@router.post('/api/join_chat')
+async def join_chat(chat: Post_join, session= Cookie(default=None)):
+    if not session:
+        return {'ok': False, 'detail': 'Not authorized'}
+    
+    async with sql.as_session() as as_session:
+        session_db = (await as_session.execute(select(sql.Session).filter_by(token=session))).scalar_one_or_none()
+        if not session_db or session_db.expires_at < datetime.now(timezone.utc):
+            return {'ok': False, 'detail': 'Not authorized'}
+        user = (await as_session.execute(select(sql.User).filter_by(user_id=session_db.user_id))).scalar_one_or_none()
+        if not user:
+            return {'ok': False, 'detail': 'Something wrong'}
+        
+        chat_db = (await as_session.execute(select(sql.Chat).filter_by(chat_id=chat.chat_id).filter(sql.Chat.members.any(sql.ChatMember.user_id!=user.user_id)))).scalar_one_or_none()
+        if not chat_db:
+            return {'ok': False, 'detail': 'No result'}
+                
+        new_chatmemb = sql.ChatMember(user_id=user.user_id, chat_id=chat_db.chat_id)
+        as_session.add(new_chatmemb)
+        await as_session.commit()
+    
+    return {'ok': True, 'detail': 'Success'}
+            
+
+@router.post('/api/get_chat')
+async def get_chat(chat: Post_infochat, session = Cookie(default=None)):
+    if not session:
+        return {'ok': False, 'detail': 'Not authorized'}
+    
+    async with sql.as_session() as as_session:
+        session_db = (await as_session.execute(select(sql.Session).filter_by(token=session))).scalar_one_or_none()
+        if not session_db or session_db.expires_at < datetime.now(timezone.utc):
+            return {'ok': False, 'detail': 'Session is expired'}
+        
+        user = (await as_session.execute(select(sql.User).filter_by(user_id=session_db.user_id).options(selectinload(sql.User.chats), selectinload(sql.User.private_chats1), selectinload(sql.User.private_chats2)))).scalar_one_or_none()
+        if not user:
+            return {'ok': False, 'detail': 'Something wrong'}
+        
+        if chat.type == 'private':
+            user_db = (await as_session.execute(select(sql.User).filter_by(user_id=chat.chat_id))).scalar_one_or_none()
+            if not user_db:
+                return {'ok': False, 'detail': 'No result user'}
+            is_member = False
+            for private_chat in user.private_chats1:
+                if private_chat.user2_id == chat.chat_id:
+                    is_member = True
+                    break
+            else:
+                for private_chat in user.private_chats2:
+                    if private_chat.user1_id == chat.chat_id:
+                        is_member = True
+                        break
+            return {'ok': True, 'detail': {'chat_id': user_db.user_id, 'title': user_db.name, 'avatar': user_db.avatar, 'desc': user_db.description, 'type': 'private', 'created_at': user_db.created_at, 'is_member': is_member}}
+        else:
+            chat_db = (await as_session.execute(select(sql.Chat).filter_by(chat_id=chat.chat_id))).scalar_one_or_none()
+            if not chat_db:
+                return {'ok': False, 'detail': 'No result'}
+            is_member = False
+            for chatmemb in user.chats:
+                if chatmemb.chat_id == chat.chat_id:
+                    is_member = True
+                    break
+            return {'ok': True, 'detail': {'chat_id': chat_db.chat_id, 'title': chat_db.title, 'avatar': chat_db.avatar, 'desc': chat_db.description, 'type': chat_db.type, 'created_by': chat_db.created_by, 'created_at': chat_db.created_at, 'is_member': is_member}}
+    
 @router.get('/api/get_chats') #get list of chats
 async def get_chats(session: Optional[str] = Cookie(default=None)):
     if not session:

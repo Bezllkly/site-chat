@@ -92,8 +92,8 @@ body {
     color: #cb2ceb;
 }
 #search-div {
-    min-width: 200px;
-    width: 20%;
+    min-width: 20px;
+    width: 30%;
     display: flex;
     background-color: white;
     border-radius: 10px;
@@ -118,11 +118,11 @@ body {
 
 .main {
     display: flex;
-    height: 100vh;
+    height: calc(100vh - 50px);
 }
 .list_of_chats {
     display: flex;
-    max-width: 600px;
+    max-width: 300px;
     flex-direction: column;
     gap: 5px;
     padding: 5px;
@@ -146,6 +146,7 @@ body {
 @media (max-width: 600px) {
     .list_of_chats {
         width: 100%;
+        max-width: 600px;
         border-right: none;
     }
     .chat {
@@ -202,6 +203,7 @@ body {
     display: flex;
     width: 98%;
     height: 6%;
+    max-height: 50px;
     min-height: 60px;
     justify-content: space-around;
     align-items: center;
@@ -291,7 +293,7 @@ body {
     height: 30px;
     cursor: pointer;
 }
-#chat-name {
+#create-chat-name {
     width: 100%;
     height: 15%;
     display: flex;
@@ -300,7 +302,7 @@ body {
     align-items: center;
     padding: 20px;
 }
-#chat-name img {
+#create-chat-name img {
     width: 80px;
     height: 80px;
     background-color: #c2c2c2;
@@ -308,10 +310,10 @@ body {
     border-radius: 30px;
     cursor: pointer;
 }
-#chat-name #photoinput {
+#create-chat-name #photoinput {
     display: none;
 }
-#chat-name #chatname-input {
+#create-chat-name #chatname-input {
     width: 70%;
     height: 55px;
     margin-left: 20px;
@@ -422,6 +424,7 @@ body {
     width: 40px;
     height: 40px;
     cursor: pointer;
+    border-radius: 20px;
 }
 .chat-bar span {
     font-size: 30px;
@@ -443,6 +446,17 @@ body {
 .input-div div {
     display: flex;
     gap: 5px;
+}
+.input-div #chat-join {
+    width: 90%;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    background-color: #cb2ceb;
+    border-radius: 10px;
+    cursor: pointer;
 }
 .input-div input {
     background-color: #cacaca;

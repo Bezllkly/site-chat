@@ -16,9 +16,14 @@ const attach = document.getElementById("attach-menu");
 attach.style.display = "none";
 const dialog = document.getElementById("dialog");
 
+const chat_bar_back = document.getElementById('chat-bar-back');
+chat_bar_back.onclick = function() {
+    const dialog = new Dialog();
+    dialog.close_dialog();
+}
 
 class Dialog {
-    open_dialog(chat_id) {
+    async open_dialog(type, chat_id) {
         const chat = document.getElementById('chat');
         const chat_bar = document.getElementById('chat-bar');
         const input_div = document.getElementById('input-div');
@@ -26,11 +31,111 @@ class Dialog {
         chat_bar.style.display = 'flex';
         input_div.style.display = 'flex';
 
+        const chat_join = document.getElementById('chat-join');
+        const input = document.getElementById('input');
+        const attach = document.getElementById('attach');
+        const send = document.getElementById('send');
+        chat_join.textContent = "Join";
+
+        const chat_name = document.getElementById('chat-name');
+        const el_avatar = document.getElementById('chat-avatar');
+        chat_name.textContent = "Chat";
+        el_avatar.src = "https://cdn-icons-png.flaticon.com/128/12067/12067335.png";
+
         this.clear_dialog();
         const chat_bar_back = document.getElementById('chat-bar-back');
         if (window.innerWidth > 600) {
             chat_bar_back.style.display = 'none';
+        } else {
+            chat_bar_back.style.display = 'inline';
+            list_of_chats.style.display = 'none';
+            const create_chat = document.getElementById('create-chat');
+            create_chat.style.display = 'none';
         }
+        console.log(chat_id);
+        let data = {type: type, chat_id: chat_id};
+        let response = await fetch('/chat/api/get_chat', 
+            {method: "POST",
+            headers: {
+                "Content-type": "application/json"
+            },
+            body: JSON.stringify(data)
+            }
+        );
+        let json = await response.json();
+        console.log(json.detail);
+        if (json.ok) {
+            console.log(json);
+            chat_name.textContent = json.detail.title;
+            if (json.detail.avatar) {
+                el_avatar.src = "/chat/api/avatar/" + json.detail.avatar;
+            } else {
+                el_avatar.src = 'https://cdn-icons-png.flaticon.com/128/12067/12067335.png';
+            }
+            if (json.detail.type == 'private') {
+                chat_join.style.display = 'none';
+                input.style.display = 'inline';
+                attach.style.display = 'inline';
+                send.style.display = 'inline';
+            } else {
+                if (json.detail.is_member) {
+                    if (type == 'group') {
+                        chat_join.style.display = 'none';
+                        input.style.display = 'inline';
+                        attach.style.display = 'inline';
+                        send.style.display = 'inline';
+                    } else {
+                        chat_join.style.display = 'none';
+                        input.style.display = 'none';
+                        attach.style.display = 'none';
+                        send.style.display = 'none';
+                    }
+                } else {
+                    chat_join.style.display = 'flex';
+                    input.style.display = 'none';
+                    attach.style.display = 'none';
+                    send.style.display = 'none';
+                }
+            }
+            chat_join.onclick = async () => {
+                console.log(chat_id);
+                let data = {chat_id: chat_id}
+                let response = await fetch("/chat/api/join_chat", 
+                    {method: "POST",
+                        headers: {
+                            "Content-type": "application/json"
+                        },
+                        body: JSON.stringify(data)
+                    }
+                )
+                let json_isjoin = await response.json();
+                if (json_isjoin.ok) {
+                    if (type == "group") {
+                        chat_join.style.display = 'none';
+                        input.style.display = 'inline';
+                        attach.style.display = 'inline';
+                        send.style.display = 'inline';
+                    } else {
+                        chat_join.style.display = 'none';
+                    }
+                } else {
+                    chat_join.textContent = json_isjoin.detail;
+                }
+            }
+        }
+
+    }
+    close_dialog() {
+        const chat = document.getElementById('chat');
+        const chat_bar = document.getElementById('chat-bar');
+        const input_div = document.getElementById('input-div');
+        chat.style.display = 'none';
+        chat_bar.style.display = 'none';
+        input_div.style.display = 'none';
+
+        list_of_chats.style.display = 'flex';
+        const create_chat = document.getElementById('create-chat');
+        create_chat.style.display = 'inline';
     }
     clear_dialog() {
         const dialog = document.getElementById('dialog');
@@ -125,7 +230,7 @@ class Chat {
         if (avatar) {
             img.src = '/chat/api/avatar/'+avatar;
         } else {
-            img.src = 'https://cdn-icons-png.flaticon.com/128/666/666201.png';
+            img.src = 'https://cdn-icons-png.flaticon.com/128/12067/12067335.png';
         }
         img.classList.add('chat-icon');
         const div = document.createElement('div');
@@ -155,7 +260,7 @@ class Chat {
 
         chat.onclick = function() {
             const dialog = new Dialog();
-            dialog.open_dialog(chat_id);
+            dialog.open_dialog(type, chat_id);
         }
         
         if (element_before) {
@@ -173,7 +278,7 @@ class Chat {
         if (avatar) {
             img.src = '/chat/api/avatar/'+avatar;
         } else {
-            img.src = 'https://cdn-icons-png.flaticon.com/128/666/666201.png';
+            img.src = 'https://cdn-icons-png.flaticon.com/128/12067/12067335.png';
         }
         img.classList.add('chat-icon');
         const div = document.createElement('div');
@@ -203,7 +308,7 @@ class Chat {
 
         chat.onclick = function() {
             const dialog = new Dialog();
-            dialog.open_dialog(chat_id);
+            dialog.open_dialog(type, chat_id);
         }
         
         list_of_chats.insertBefore(chat, list_of_chats.firstChild);
@@ -244,6 +349,8 @@ class Chat {
     title() {
         const title = document.createElement('div');
         title.onclick = () => {
+            const search_input = document.getElementById('search-input');
+            search_input.value = '';
             this.delete_all();
             for (let chat_id of all_chats_ids) {
                 let chat = all_chats[chat_id];
@@ -419,7 +526,7 @@ search_input.onfocus = function() {
 }
 search_input.onblur = function() {
     if (!search_input.value) {
-        search_div.style.width = '20%';
+        search_div.style.width = '30%';
     }
 }
 const search_img = document.getElementById('search-img');
