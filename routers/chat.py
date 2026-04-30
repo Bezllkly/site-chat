@@ -6,7 +6,7 @@ import os
 from fastapi import APIRouter
 from typing import Optional
 import sql.sql as sql
-from sqlalchemy import URL, create_engine, text, insert, ForeignKey, select, update, func, cast, delete, or_
+from sqlalchemy import URL, create_engine, text, insert, ForeignKey, select, update, func, cast, delete, or_, and_
 from sqlalchemy.orm import joinedload, selectinload
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
@@ -29,7 +29,9 @@ class Return_chat:
 
 class Post_chat(BaseModel):
     last_sync_at: Optional[datetime]
+    type: str
     chat_id: int
+    last_mess_created: Optional[datetime]
 
 class Post_search(BaseModel):
     content: str
@@ -41,6 +43,10 @@ class Post_infochat(BaseModel):
     chat_id: int
 
 class Post_join(BaseModel):
+    chat_id: int
+
+class Post_sendmess(BaseModel):
+    type: str
     chat_id: int
 
 class Update(BaseModel):
@@ -173,9 +179,10 @@ async def registration(response: Response, request: Request, user: Post_Session)
         return {'ok': True, 'detail': session_token}
 
 @router.post('/api/send_mess')
-async def send_mess(session = Cookie(default=None)):
+async def send_mess(text = Form(default=None), files = File(default=None), chat_id = Form(), chat_type = Form(), session = Cookie(default=None)):
     if not session:
         return {'ok': False, 'detail': 'Not authorized'}
+    return {'ok': True, 'detail': 'Good'}
     
     user_db = (await as_session.execute(select(sql.User).filter_by(user_id=chat.chat_id).options(selectinload(sql.User.private_chats1), selectinload(sql.User.private_chats2)))).scalar_one_or_none()
     if not user_db:
@@ -276,37 +283,86 @@ async def get_chats(session: Optional[str] = Cookie(default=None)):
         chats.append({'chat_id': chatmemb.chat.chat_id, 'username': chatmemb.chat.username, 'chat_type': chatmemb.chat.type, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content})
     return {'ok': True, 'detail': chats} 
 
-@router.post('/api/get_messages') #get chat's messages
+@router.post('/api/get_mess') #get chat's messages
 async def get_messages(chat: Post_chat, session: Optional[str] = Cookie(default=None)):
     if not session:
         return {'ok': False, 'detail': 'Not authorized'}
-    if chat.last_sync_at is None:
+    if not chat.last_sync_at:
         chat.last_sync_at = datetime(1970)
+    if not chat.last_mess_created:
+        chat.last_mess_created = datetime(year=9000, month=1, day=1)
+
+    last_read_id = None
     
     async with sql.as_session() as as_session:
         db_session = (await as_session.execute(select(sql.Session).filter_by(token=session).options(selectinload(sql.Session.user).selectinload(sql.User.chats)))).scalar_one_or_none()
-    if (not db_session) or db_session.expires_at < datetime.now(timezone.utc):
-        return {'ok': False, 'detail': 'Session is expired'}
+        if (not db_session) or db_session.expires_at < datetime.now(timezone.utc):
+            return {'ok': False, 'detail': 'Session is expired'}
 
-    async with sql.as_session() as as_session:
-        chatmemb = (await as_session.execute(select(sql.ChatMember).filter_by(user_id=db_session.user.user_id, chat_id=chat.chat_id).options(selectinload(sql.ChatMember.chat).selectinload(sql.Chat.messages)))).scalar_one_or_none()
-    if not chatmemb:
-        return {'ok': False, 'detail': 'Chat doesnt exist'}
-    messages = []
-    for message in chatmemb.chat.messages:
-        if message.created_at > chat.last_sync_at:
-            messages.append({'chat_id': message.chat_id,
-                             'created_by': message.created_by,
-                             'created_at': message.created_at,
-                             'updated_at': message.updated_at,
-                             'reply_to_id': message.reply_to_id,
-                             'text': message.text,
-                             'attachment_type': message.attachment_type,
-                             'attachment': message.attachment,
-                             'is_read': message.is_read,
-                             'count_viewed': message.count_viewed})
+        if chat.type == 'private':
+            chatmemb = (await as_session.execute(select(sql.Private_Chat).where(or_(and_(sql.Private_Chat.user1_id == db_session.user_id, sql.Private_Chat.user2_id == chat.chat_id), and_(sql.Private_Chat.user1_id == chat.chat_id, sql.Private_Chat.user2_id == db_session.user_id))).options(selectinload(sql.Private_Chat.messages)))).scalar_one_or_none()
+            if not chatmemb:
+                return {'ok': False, 'detail': 'Chat doesnt exist'}
+            messages = []
+            for message in chatmemb.messages[::-1]:
+                if len(messages) == 10:
+                    break
+                if chat.last_mess_created < message.created_at:
+                    continue
+                if message.created_at > chat.last_sync_at:
+                    if message.text and not message.attachment:
+                        mess_type = 'text'
+                    elif message.attachment_type:
+                        mess_type = message.attachment_type
+                    messages.append({'chat_id': message.chat_id,
+                                     'mess_id': message.id,
+                                     'created_by': message.created_by_id,
+                                     'created_at': message.created_at.strftime("%m:%d:%H:%M"),
+                                     'reply_to_id': message.reply_to_id,
+                                     'text': message.text,
+                                     'mess_type': mess_type,
+                                     'attachment': message.attachment,
+                                     'is_read': message.is_read})
+                else:
+                    break
+            
+            for message in chatmemb.messages[::-1]:
+                if message.created_by_id == db_session.user_id and message.is_read:
+                    last_read_id = message.id
+                    break
+        else:
+            chat_db = (await as_session.execute(select(sql.Chat).filter_by(chat_id=chat.chat_id).options(selectinload(sql.Chat.messages)))).scalar_one_or_none()
+            if not chat_db:
+                return {'ok': False, 'detail': 'Chat doesnt exist'}
+            messages = []
+            for message in chat_db.messages[::-1]:
+                if len(messages) == 10:
+                    break
+                if chat.last_mess_created < message.created_at:
+                    continue
+                if message.created_at > chat.last_sync_at:
+                    if message.text and not message.attachment:
+                        mess_type = 'text'
+                    elif message.attachment_type:
+                        mess_type = message.attachment_type
+                    messages.append({'chat_id': message.chat_id,
+                                     'mess_id': message.id,
+                                     'created_by': message.created_by,
+                                     'created_at': message.created_at,
+                                     'updated_at': message.updated_at,
+                                     'reply_to_id': message.reply_to_id,
+                                     'text': message.text,
+                                     'mess_type': mess_type,
+                                     'attachment': message.attachment,
+                                     'is_read': message.is_read})
+                else:
+                    break
+            for message in chat_db.messages[::-1]:
+                if message.created_by_id == db_session.user_id and message.is_read:
+                    last_read_id = message.id
+                    break
     print(messages)
-    return {'ok': True, 'detail': messages}
+    return {'ok': True, 'detail': {'mess': messages.reverse(), 'last_read_id': last_read_id}}
 
 @router.get("/api/attach/{chat_id}/{file_path}")
 async def get_file(chat_id: str, file_path: str, session = Cookie(default=None)):
@@ -330,6 +386,25 @@ async def get_file(chat_id: str, file_path: str, session = Cookie(default=None))
         return {'ok': False, 'detail': 'Something wrong'}
 
     return FileResponse(path=path)
+
+@router.get("/api/attach-info/{chat_id}/{file_path}")
+async def get_file(chat_id: str, file_path: str, session = Cookie(default=None)):
+    if not chat_id.isdigit():
+        return {'ok': False, 'detail': 'Chat_id must be digit'}
+    if not session:
+        return {'ok': False, 'detail': 'Not authorized'}
+    chat_id = int(chat_id)
+    
+    async with sql.as_session() as as_session:
+        query = (await as_session.execute(select(sql.Session).filter_by(token=session).options(selectinload(sql.Session.user).selectinload(sql.User.chats)))).scalar_one_or_none()
+        if not query or query.expires_at < datetime.now(timezone.utc):
+            return {'ok': False, 'detail': 'Session is expired'}
+    
+        file = (await as_session.execute(select(sql.File).filter_by(user_id=query.user.user_id, chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.chat).selectinload(sql.Chat.members)))).scalar_one_or_none()
+    if not file:
+        return {'ok': False, 'detail': 'No results'}
+    
+    return {'ok': True, 'detail': {'orig_name': file.file_origname, "type": file.file_type, 'size': file.file_size}}
 
 @router.get('/api/avatar/{file_name}')
 async def get_avatar(file_name: str, session = Cookie(default=None)):
@@ -517,11 +592,5 @@ async def update(update_data: Update, session = Cookie(default=None)):
 @router.get('/del')
 async def delete_cookie(response: Response, session: Optional[str] = Cookie(default=None)):
     if session:
-        response.set_cookie(
-            key="session",
-            path="/",
-            max_age=-1,
-            httponly=True,
-            samesite="lax"
-        )
+        response.delete_cookie(key='session')
     return RedirectResponse('/chat')

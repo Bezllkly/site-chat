@@ -4,16 +4,22 @@ let all_private_chats = {} /* key - chat_id, value - json*/
 let all_private_chats_ids = [] /* chats id */
 let search_chats = [] /* keys - users, chats. value - them lists */
 let is_searching = false;
+let is_dialog_opened = false;
+let current_chat_type;
+let current_chat_id;
+let messages_history = [];
+let last_mess_created = new Date(19999);
+let last_sync_at = new Date();
 
 const chat_el = document.getElementById('chat');
 const chat_bar = document.getElementById('chat-bar');
-const input_div =document.getElementById('input-div');
+const input_div = document.getElementById('input-div');
 chat_el.style.display = 'none';
 chat_bar.style.display = 'none';
 input_div.style.display = 'none';
 
-const attach = document.getElementById("attach-menu");
-attach.style.display = "none";
+const attach_menu = document.getElementById("attach-menu");
+/* attach_menu.style.display = "none"; */
 const dialog = document.getElementById("dialog");
 
 const chat_bar_back = document.getElementById('chat-bar-back');
@@ -24,6 +30,13 @@ chat_bar_back.onclick = function() {
 
 class Dialog {
     async open_dialog(type, chat_id) {
+        is_dialog_opened = true;
+        last_mess_created = null;
+        last_sync_at = new Date(1970);
+        messages_history = [];
+        current_chat_type = type;
+        current_chat_id = chat_id;
+
         const chat = document.getElementById('chat');
         const chat_bar = document.getElementById('chat-bar');
         const input_div = document.getElementById('input-div');
@@ -126,6 +139,7 @@ class Dialog {
 
     }
     close_dialog() {
+        is_dialog_opened = false;
         const chat = document.getElementById('chat');
         const chat_bar = document.getElementById('chat-bar');
         const input_div = document.getElementById('input-div');
@@ -143,9 +157,10 @@ class Dialog {
             dialog.removeChild(dialog.firstChild);
         }
     }
-    create_message(text, is_me = true, time) {
+    create_message(mes_id, text, is_me = true, time) {
         const message = document.createElement("div");
         message.classList.add("message");
+        message.id = mes_id;
         const h4 = document.createElement("h4");
         h4.textContent = text;
         message.appendChild(h4);
@@ -158,6 +173,7 @@ class Dialog {
             const img = document.createElement("img");
             img.src = "https://cdn-icons-png.flaticon.com/128/992/992700.png";
             img.title = "sent";
+            img.id = "img-" + mes_id;
             mess_state.appendChild(img);
 
             message.style.backgroundColor = "#cb2ceb";
@@ -174,10 +190,11 @@ class Dialog {
         dialog.appendChild(message);
     }
 
-    create_capture(text=null, is_me, time, capture_link) {
+    create_capture(mes_id, text=null, is_me, time, capture_link) {
         console.log(capture_link);
         const capture = document.createElement("div");
         capture.classList.add("capture");
+        capture.id = mes_id;
         const dialog_img = document.createElement("img");
         dialog_img.classList.add("dialog-img");
         dialog_img.src = capture_link;
@@ -197,6 +214,7 @@ class Dialog {
             const img = document.createElement("img");
             img.src = "https://cdn-icons-png.flaticon.com/128/992/992700.png";
             img.title = "loading";
+            img.id = 'img-' + mes_id;
             mess_state.appendChild(img);
 
             capture.style.backgroundColor = "#cb2ceb";
@@ -213,12 +231,111 @@ class Dialog {
         dialog.appendChild(capture);
     }
 
-    create_file(text=null, is_me, time, file_path) {
+    create_file(mes_id, text=null, file_name, file_size, file_type, is_me, time) {
         const file = document.createElement("div");
         file.classList.add("file");
+        file.id = mes_id;
         const dialog_file = document.createElement("div");
         dialog_file.classList.add("dialog-file");
 
+        let img = document.createElement('img')
+        img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
+        let h4 = document.createElement('h4');
+        if (file_name.length > 30) {
+            h4.textContent = file_name.slice(0, 30) + '...';
+        } else {
+            h4.textContent = file_name;
+        }
+        dialog_file.appendChild(img);
+
+        const dialog_file_info = document.createElement('div');
+        dialog_file_info.classList.add('dialog-file-info');
+        dialog_file_info.appendChild(h4);
+
+        const div = document.createElement('div');
+        const span_size = document.createElement('span');
+        span_size.textContent = file_size / 1000000 + 'KB';
+        const span_type = document.createElement('span');
+        span_type.textContent = file_type;
+        div.appendChild(span_size);
+        div.appendChild(span_type);
+        dialog_file_info.appendChild(div);
+
+        dialog_file.appendChild(dialog_file_info);
+        file.appendChild(dialog_file);
+
+        h4 = document.createElement('h4');
+        h4.textContent = text;
+        file.appendChild(h4);
+
+        const mes_state = document.createElement('div');
+        mes_state.classList.add('mess-state');
+        const h6 = document.createElement('h6');
+        h6.textContent = time;
+        mes_state.appendChild(h6);
+        if (is_me) {
+            img = document.createElement('img');
+            img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
+            img.id = 'img-'+mes_id;
+            mes_state.appendChild(img);
+            file.style.backgroundColor = "#cb2ceb";
+            file.style.marginLeft = "auto";
+            file.style.marginRight = "0px";
+            dialog_file.style.backgroundColor = "#9535a8"
+        }
+
+        file.appendChild(mes_state);
+        dialog.appendChild(file);
+    }
+    create_video(mes_id, text=null, video_path, is_me, time) {
+        const video = document.createElement('div');
+        video.classList.add('video');
+        video.id = mes_id;
+        const dialog_video = document.createElement('div');
+        dialog_video.classList.add('dialog-video');
+        const el_video = document.createElement('video');
+        el_video.volume = 0.5;
+        el_video.width = '640';
+        el_video.height = '360';
+        el_video.controls = true;
+        const source = document.createElement('source');
+        source.src = video_path;
+        source.type = 'video/mp4';
+        el_video.appendChild(source);
+        dialog_video.appendChild(el_video);
+        video.appendChild(dialog_video);
+        
+        const h4 = document.createElement('h4');
+        h4.textContent = text;
+        dialog_video.appendChild(h4);
+
+        const mess_state = document.createElement('div');
+        mess_state.classList.add('mess-state')
+        const h6 = document.createElement('h6');
+        h6.textContent = time;
+        mess_state.appendChild(h6);
+        if (is_me) {
+            const img = document.createElement('img');
+            img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
+            img.id = 'img-'+mes_id;
+            mess_state.appendChild(img);
+            mess_state.appendChild(img);
+            video.style.backgroundColor = "#cb2ceb";
+            video.style.marginLeft = "auto";
+            video.style.marginRight = "0px";
+        }
+        dialog_video.appendChild(mess_state);
+        dialog.appendChild(video);
+    }
+    create_title(text, color='red') {
+        const dialog_title = document.createElement('div');
+        dialog_title.id = 'dialog-title';
+        dialog_title.classList.add('dialog-notification');
+        dialog_title.style.backgroundColor = color;
+        const span = document.createElement('span');
+        span.textContent = text;
+        dialog_title.appendChild(span);
+        dialog.appendChild(dialog_title);
     }
 };
 const list_of_chats = document.getElementById('list-of-chats');
@@ -437,10 +554,102 @@ class Chat {
         list_of_chats.appendChild(title);
     }
 }
+class Attachment {
+    show() {
+        attach_menu.style.display = 'grid';
+    }
+    close() {
+        attach_menu.style.display = 'none';
+    }
+    delete_all() {
+        while (attach_menu.firstChild) {
+            attach_menu.removeChild(attach_menu.firstChild);
+        }
+    }
+    create_file(indexToRemove, title, f_size, f_type) {
+        const attach_file = document.createElement('div');
+        attach_file.classList.add('attach-file');
+
+        const img = document.createElement('img');
+        img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
+        img.title = 'file';
+        attach_file.appendChild(img);
+
+        const h4 = document.createElement('h4');
+        h4.textContent = title;
+        const h4_div = document.createElement('div');
+        const size = document.createElement('span');
+        const type = document.createElement('span');
+        size.textContent = f_size;
+        type.textContent = f_type;
+        h4_div.appendChild(size);
+        h4_div.appendChild(type);
+        h4.appendChild(h4_div);
+        attach_file.appendChild(h4);
+        attach_menu.appendChild(attach_file);
+
+        attach_file.onmouseenter = function() {
+            img.src = "https://cdn-icons-png.flaticon.com/512/2976/2976286.png";
+        }
+        attach_file.onmouseleave = function() {
+            img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
+        }
+        attach_file.onclick = function() {
+            attach_file.style.display = 'none';
+
+            const files = Array.from(attach_input.files);
+            // Удаляем файл по индексу
+            files.splice(indexToRemove, 1);
+
+            // Создаем новый FileList
+            const dataTransfer = new DataTransfer();
+            files.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+
+            // Присваиваем новый FileList инпуту
+            attach_input.files = dataTransfer.files;
+
+            // Триггерим событие change
+            attach_input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+    create_cap(indexToRemove, link) {
+        const attach_cap = document.createElement('attach-cap');
+        attach_cap.classList.add('attach-cap');
+        
+        const img = document.createElement('img');
+        img.src = link;
+        img.title = 'capture';
+        const currentWidth = img.offsetWidth;
+        const currentHeight = img.offsetHeight;
+        console.log(currentHeight, currentWidth);
+
+        attach_cap.appendChild(img);
+        attach_menu.appendChild(attach_cap);
+
+        attach_cap.onmouseenter = function() {
+            img.src = "https://cdn-icons-png.flaticon.com/512/2976/2976286.png";
+            img.style.width = currentWidth;
+            img.style.height = currentHeight;
+        }
+    }
+}
+
+
+const att = new Attachment();
+att.create_file(1, 'sosal.py', '1234', 'py');
+att.create_file(1, 'sosal.py', '1234', 'py');
+att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
+att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
+att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
+att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
 
 const lol = new Dialog();
-lol.create_message(text="hello world", is_me=true, time="13:13");
-lol.create_capture(text="pidorasiki", is_me=true, time="13:14", capture_link="https://avatars.mds.yandex.net/i?id=e78d4009808bc84c2ee005cd3e114582ae954998-4219539-images-thumbs&n=13");
+lol.create_message(1234, text="kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkhello world", is_me=true, time="13:13");
+lol.create_capture(12345, text="pidorasiki", is_me=true, time="13:14", capture_link="https://avatars.mds.yandex.net/i?id=e78d4009808bc84c2ee005cd3e114582ae954998-4219539-images-thumbs&n=13");
+lol.create_file(111, 'texthhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh hhhhhhhhhhhhhhhhhhh', 'llllllllllllllllllllllllllllllllllfile_name.txt', 2000000, 'txt', false, '12:00');
+lol.create_video(123, 'text', "/files/f/IMG_6704.MOV", false, "13:00");
 
 const create_chat_status = document.getElementById('create-chat-status');
 
@@ -586,10 +795,36 @@ search_img.onclick = async function() {
     }
 }
 
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const attach = document.getElementById('attach');
+const attach_input = document.getElementById('attach-input');
+
+attach.onclick = function() {
+    attach_input.click();
+}
+
+attach_input.addEventListener('change', (e) => {
+    const files = e.target.files;
+})
+
+send.onclick = async function() {
+    if (!input.value & !attach_menu.files[0]) {
+        console.log(input.value);
+        return;
+    }
+    const formdata = new FormData();
+    formdata.append('text', input.value);
+    for (file of attach_input.files) {
+        formdata.append('files', file);
+    }
+
+}
+
 /* MAIN DIALOG */
 
 /* auto_update */
-let last_sync_at = new Date(1970);
+last_sync_at = new Date(1970);
 const chat = new Chat();
 chat.delete_all();
 async function auto_update() {
@@ -634,15 +869,35 @@ async function auto_update() {
             }
         }
 
-        response = await fetch('/chat/api/get_myself');
-        json = await response.json();
-        if (json.ok) {
-            const your_name = document.getElementById('user-name');
-            your_name.textContent = json.detail.name;
-            const settings = document.getElementById('settings');
-            if (json.avatar) {
-                settings.src = '/chat/api/avatar/'+json.detail.avatar;
+        try {
+            response = await fetch('/chat/api/get_myself');
+            json = await response.json();
+            if (json.ok) {
+                const your_name = document.getElementById('user-name');
+                your_name.textContent = json.detail.name;
+                const settings = document.getElementById('settings');
+                if (json.avatar) {
+                    settings.src = '/chat/api/avatar/'+json.detail.avatar;
+                }
             }
+        } catch (error) {
+            console.log(error);
+        }
+
+        if (is_dialog_opened) {
+            data = {'last_sync_at': last_sync_at, 'type': current_chat_type, 'chat_id': current_chat_id, 'last_mess_created': last_mess_created};
+            console.log(data);
+            response = await fetch('/chat/api/get_mess', {
+                'method': 'POST',
+                'headers': {
+                    'Content-type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            console.log('hewudiwdghu');
+            json = await response.json();
+            let dd = new Dialog();
+            dd.create_title(json.ok+'\n'+json.detail, 'black');
         }
     } catch (error) {
         console.log(error);

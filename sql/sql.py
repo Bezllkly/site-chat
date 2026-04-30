@@ -63,7 +63,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
     chatsadmin = relationship('Chat', back_populates='creator', cascade="all, delete-orphan")
-    messages = relationship("Message", back_populates='user')
+    messages = relationship("Message", back_populates='created_by')
     sessions = relationship("Session", back_populates='user', cascade="all, delete-orphan")
     chats = relationship("ChatMember", back_populates='user', cascade='all, delete-orphan')
     files = relationship("File", back_populates='user')
@@ -148,7 +148,7 @@ class Message(Base):
     __tablename__ = 'messages'
 
     id = Column(Integer, primary_key=True)
-    created_by = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
+    created_by_id = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
     updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  , onupdate=datetime.now(timezone.utc)  )
@@ -163,7 +163,7 @@ class Message(Base):
 
     chat = relationship('Chat', back_populates='messages', foreign_keys=[chat_id])
     private_chat = relationship('Private_Chat', back_populates='messages', foreign_keys=[private_chat_id])
-    user = relationship('User', back_populates='messages', foreign_keys=[created_by])
+    created_by = relationship('User', back_populates='messages', foreign_keys=[created_by_id])
     reply_to = relationship('Message', remote_side=[id], foreign_keys=[reply_to_id])
     replies = relationship('Message', back_populates='reply_to')
 
