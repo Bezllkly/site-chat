@@ -147,7 +147,7 @@ async def registration(response: Response, request: Request, user: Post_Session)
             new_session = sql.Session(token=session_token, user_id=person.user_id, country=country, region=region, user_agent=user_agent, ip_address=request.client.host)
             as_session.add_all([new_session])
             await as_session.commit()
-            response.set_cookie(key="session", value=session_token)
+            response.set_cookie(key="session", value=session_token, max_age=31536000)
         return {'ok': True, 'detail': session_token}
     else: #registration
         #create globalchat
@@ -175,7 +175,7 @@ async def registration(response: Response, request: Request, user: Post_Session)
         async with sql.as_session() as as_session:
             as_session.add_all([new_user, new_session, new_username])
             await as_session.commit()
-        response.set_cookie(key='session', value=session_token)
+        response.set_cookie(key='session', value=session_token, max_age=31536000)
         return {'ok': True, 'detail': session_token}
 
 @router.post('/api/send_mess')

@@ -621,18 +621,11 @@ class Attachment {
         const img = document.createElement('img');
         img.src = link;
         img.title = 'capture';
-        const currentWidth = img.offsetWidth;
-        const currentHeight = img.offsetHeight;
-        console.log(currentHeight, currentWidth);
 
         attach_cap.appendChild(img);
         attach_menu.appendChild(attach_cap);
 
-        attach_cap.onmouseenter = function() {
-            img.src = "https://cdn-icons-png.flaticon.com/512/2976/2976286.png";
-            img.style.width = currentWidth;
-            img.style.height = currentHeight;
-        }
+        
     }
 }
 
