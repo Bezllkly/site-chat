@@ -544,7 +544,13 @@ body {
     height: 95%;
     cursor: pointer;
 }
-.attach .attach-cap img {
+.attach .attach-cap div,
+.attach .attach-mov div{
+    position: relative;
+    display: inline-block;
+}
+.attach .attach-cap div .main-cap {
+    display: block;
     width: auto;
     height: 100%;
     max-height: 100px;
@@ -552,16 +558,28 @@ body {
     border-radius: 10px;
     border-bottom: 2px solid black;
 }
+.attach .attach-cap div .close-cap,
+.attach-mov div .close-cap{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Дополнительно: */
+    max-width: 70%; /* Чтобы не вылезало за края */
+    max-height: 70%;
+    aspect-ratio: 1 / 1;
+}
+
 .attach .attach-mov {
-    width: 100px;
-    max-width: fit-content;
+    width: fit-content;
     height: 95%;
     cursor: pointer;
 }
-.attach .attach-mov video {
-    max-height: 100px;
-    width: 100%;
+.attach .attach-mov div video {
+    width: auto;
     height: 100%;
+    max-height: 100px;
+    max-width: fit-content;
     border-radius: 10px;
     border-bottom: 2px solid black;
 }

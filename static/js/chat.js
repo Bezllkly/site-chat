@@ -11,6 +11,8 @@ let messages_history = [];
 let last_mess_created = new Date(19999);
 let last_sync_at = new Date();
 
+let attach_dict = {};
+
 const chat_el = document.getElementById('chat');
 const chat_bar = document.getElementById('chat-bar');
 const input_div = document.getElementById('input-div');
@@ -19,6 +21,10 @@ chat_bar.style.display = 'none';
 input_div.style.display = 'none';
 
 const attach_menu = document.getElementById("attach-menu");
+attach_menu.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    attach_menu.scrollLeft += e.deltaY/2;
+})
 /* attach_menu.style.display = "none"; */
 const dialog = document.getElementById("dialog");
 
@@ -597,40 +603,80 @@ class Attachment {
         attach_file.onclick = function() {
             attach_file.style.display = 'none';
 
-            const files = Array.from(attach_input.files);
-            // Удаляем файл по индексу
-            files.splice(indexToRemove, 1);
-
-            // Создаем новый FileList
-            const dataTransfer = new DataTransfer();
-            files.forEach(file => {
-                dataTransfer.items.add(file);
-            });
-
-            // Присваиваем новый FileList инпуту
-            attach_input.files = dataTransfer.files;
-
-            // Триггерим событие change
-            attach_input.dispatchEvent(new Event('change', { bubbles: true }));
+            delete attach_dict[indexToRemove];
         }
     }
     create_cap(indexToRemove, link) {
         const attach_cap = document.createElement('attach-cap');
         attach_cap.classList.add('attach-cap');
         
-        const img = document.createElement('img');
-        img.src = link;
-        img.title = 'capture';
+        const img_cont = document.createElement('div');
+        const main_img = document.createElement('img');
+        main_img.classList.add('main-cap');
+        main_img.src = link;
+        main_img.title = 'capture';
+        img_cont.appendChild(main_img);
 
-        attach_cap.appendChild(img);
+        const close_img = document.createElement('img');
+        close_img.classList.add('close-cap');
+        close_img.style.display = 'none';
+        close_img.src = 'https://cdn-icons-png.flaticon.com/128/2976/2976286.png';
+        img_cont.appendChild(close_img);
+
+        attach_cap.appendChild(img_cont);
         attach_menu.appendChild(attach_cap);
 
-        
+        attach_cap.onmouseenter = () => {
+            close_img.style.display = 'block';
+        }
+        attach_cap.onmouseleave = () => {
+            close_img.style.display = 'none';
+        }
+        attach_cap.onclick = function() {
+            attach_cap.style.display = 'none';
+            delete attach_dict[indexToRemove];
+        }
+    }
+    create_mov(indexToRemove, link) {
+        const attach_mov = document.createElement('div');
+        attach_mov.classList.add('attach-mov');
+
+        const div = document.createElement('div');
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.controls = false;
+        video.style.pointerEvents = 'none';
+        video.src = link;
+        div.appendChild(video);
+
+        const close_cap = document.createElement('img');
+        close_cap.classList.add('close-cap');
+        close_cap.src = "https://cdn-icons-png.flaticon.com/128/27/27223.png";
+        close_cap.style.width = 'auto';
+        close_cap.style.height = '40%';
+        div.appendChild(close_cap);
+        attach_mov.appendChild(div);
+        attach_menu.appendChild(attach_mov);
+
+        attach_mov.onmouseenter = () => {
+            close_cap.src = "https://cdn-icons-png.flaticon.com/128/2976/2976286.png";
+            close_cap.style.height = '70%';
+        }
+        attach_mov.onmouseleave = () => {
+            close_cap.src = "https://cdn-icons-png.flaticon.com/128/27/27223.png";
+            close_cap.style.height = '40%';
+        }
+        attach_mov.onclick = () => {
+            attach_mov.style.display = 'none';
+            delete attach_dict[indexToRemove];
+        }
     }
 }
 
 
 const att = new Attachment();
+att.create_mov(1, "http://localhost:1234/files/f/опенинг1.mp4");
+att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7116d32dfec632db960190d3db81bd6e95cd3e96-5283596-images-thumbs&n=13')
 att.create_file(1, 'sosal.py', '1234', 'py');
 att.create_file(1, 'sosal.py', '1234', 'py');
 att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
