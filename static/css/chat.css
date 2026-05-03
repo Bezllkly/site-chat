@@ -499,8 +499,8 @@ body {
 .attach {
     background-color: #c2c2c2;
     width: max-content;
-    min-width: 60%;
-    max-width: 60%;
+    min-width: 100%;
+    max-width: 100%;
     max-height: 30%;
     display: grid;
     grid-template-columns: repeat(3, auto);
@@ -583,18 +583,7 @@ body {
     border-radius: 10px;
     border-bottom: 2px solid black;
 }
-.attach .attach-manage {
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-.attach .attach-manage img {
-    width: 15px;
-    height: 15px;
-    background-color: #bdbdbd;
-    border-radius: 10px;
-    cursor: pointer;
-}
+
 
 .dialog {
     display: flex;

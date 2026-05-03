@@ -8,10 +8,12 @@ let is_dialog_opened = false;
 let current_chat_type;
 let current_chat_id;
 let messages_history = [];
-let last_mess_created = new Date(19999);
-let last_sync_at = new Date();
+let mess_id_until;
+let mess_id_from;
 
 let attach_dict = {};
+
+let me_info = {}; 
 
 const chat_el = document.getElementById('chat');
 const chat_bar = document.getElementById('chat-bar');
@@ -25,7 +27,7 @@ attach_menu.addEventListener('wheel', (e) => {
     e.preventDefault();
     attach_menu.scrollLeft += e.deltaY/2;
 })
-/* attach_menu.style.display = "none"; */
+attach_menu.style.display = "none";
 const dialog = document.getElementById("dialog");
 
 const chat_bar_back = document.getElementById('chat-bar-back');
@@ -37,8 +39,8 @@ chat_bar_back.onclick = function() {
 class Dialog {
     async open_dialog(type, chat_id) {
         is_dialog_opened = true;
-        last_mess_created = null;
-        last_sync_at = new Date(1970);
+        mess_id_until = null;
+        mess_id_from = null;
         messages_history = [];
         current_chat_type = type;
         current_chat_id = chat_id;
@@ -103,11 +105,23 @@ class Dialog {
                         input.style.display = 'inline';
                         attach.style.display = 'inline';
                         send.style.display = 'inline';
-                    } else {
+                    } else if (type == 'private') {
                         chat_join.style.display = 'none';
                         input.style.display = 'none';
                         attach.style.display = 'none';
                         send.style.display = 'none';
+                    } else {
+                        if (json.detail.is_admin) {
+                            chat_join.style.display = 'none';
+                            input.style.display = 'inline';
+                            attach.style.display = 'inline';
+                            send.style.display = 'inline';   
+                        } else {
+                            chat_join.style.display = 'none';
+                            input.style.display = 'none';
+                            attach.style.display = 'none';
+                            send.style.display = 'none';    
+                        }
                     }
                 } else {
                     chat_join.style.display = 'flex';
@@ -142,7 +156,6 @@ class Dialog {
                 }
             }
         }
-
     }
     close_dialog() {
         is_dialog_opened = false;
@@ -247,8 +260,8 @@ class Dialog {
         let img = document.createElement('img')
         img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
         let h4 = document.createElement('h4');
-        if (file_name.length > 30) {
-            h4.textContent = file_name.slice(0, 30) + '...';
+        if (file_name.length > 15) {
+            h4.textContent = file_name.slice(0, 15) + '...';
         } else {
             h4.textContent = file_name;
         }
@@ -260,7 +273,17 @@ class Dialog {
 
         const div = document.createElement('div');
         const span_size = document.createElement('span');
-        span_size.textContent = file_size / 1000000 + 'KB';
+
+        if (file_size > 1073741823) {
+            span_size.textContent = (file_size / 1_073_741_824).toFixed(1) + 'GB';
+        } else if (file_size > 1048575) {
+            span_size.textContent = (file_size / 1048576).toFixed(1) + 'MB';
+        } else if (file_size > 1023) {
+            span_size.textContent = (file_size / 1024).toFixed(1) + "KB";
+        } else {
+            span_size.textContent = file_size + 'B';
+        }
+
         const span_type = document.createElement('span');
         span_type.textContent = file_type;
         div.appendChild(span_size);
@@ -271,7 +294,11 @@ class Dialog {
         file.appendChild(dialog_file);
 
         h4 = document.createElement('h4');
-        h4.textContent = text;
+        if (text && text.length > 10) {
+            h4.textContent = text.slice(0, 10) + '...';
+        } else {
+            h4.textContent = text;
+        }
         file.appendChild(h4);
 
         const mes_state = document.createElement('div');
@@ -562,7 +589,7 @@ class Chat {
 }
 class Attachment {
     show() {
-        attach_menu.style.display = 'grid';
+        attach_menu.style.display = 'flex';
     }
     close() {
         attach_menu.style.display = 'none';
@@ -600,10 +627,14 @@ class Attachment {
         attach_file.onmouseleave = function() {
             img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
         }
-        attach_file.onclick = function() {
+        attach_file.onclick = () => {
             attach_file.style.display = 'none';
 
             delete attach_dict[indexToRemove];
+            if (Object.keys(attach_dict).length == 0) {
+                this.close();
+                this.change_state('def');
+            }
         }
     }
     create_cap(indexToRemove, link) {
@@ -632,9 +663,13 @@ class Attachment {
         attach_cap.onmouseleave = () => {
             close_img.style.display = 'none';
         }
-        attach_cap.onclick = function() {
+        attach_cap.onclick = () => {
             attach_cap.style.display = 'none';
             delete attach_dict[indexToRemove];
+            if (Object.keys(attach_dict).length == 0) {
+                this.close();
+                this.change_state('def');
+            }
         }
     }
     create_mov(indexToRemove, link) {
@@ -669,20 +704,24 @@ class Attachment {
         attach_mov.onclick = () => {
             attach_mov.style.display = 'none';
             delete attach_dict[indexToRemove];
+            if (Object.keys(attach_dict).length == 0) {
+                this.close();
+                this.change_state('def');
+            }
+        }
+    }
+    change_state(text) {
+        /* text may be "minus" "plus" "def"*/
+        const attach_img = document.getElementById('attach-img');
+        if (text == "minus") {
+            attach_img.src = 'https://cdn-icons-png.flaticon.com/128/1828/1828901.png';
+        } else if (text == 'plus') {
+            attach_img.src = "https://cdn-icons-png.flaticon.com/512/3524/3524388.png";
+        } else {
+            attach_img.src = "https://cdn-icons-png.flaticon.com/128/9941/9941021.png";
         }
     }
 }
-
-
-const att = new Attachment();
-att.create_mov(1, "http://localhost:1234/files/f/опенинг1.mp4");
-att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7116d32dfec632db960190d3db81bd6e95cd3e96-5283596-images-thumbs&n=13')
-att.create_file(1, 'sosal.py', '1234', 'py');
-att.create_file(1, 'sosal.py', '1234', 'py');
-att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
-att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
-att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
-att.create_cap(1, 'https://avatars.mds.yandex.net/i?id=7ddaf753c1065447786229b01dc4591101130c5b-6881974-images-thumbs&n=13')
 
 const lol = new Dialog();
 lol.create_message(1234, text="kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkhello world", is_me=true, time="13:13");
@@ -840,24 +879,90 @@ const attach = document.getElementById('attach');
 const attach_input = document.getElementById('attach-input');
 
 attach.onclick = function() {
-    attach_input.click();
+    if (Object.keys(attach_dict).length == 0) {
+        attach_input.click();
+    } else {
+        const attachm = new Attachment();
+        if (attach_menu.style.display == 'none') {
+            attachm.change_state('minus');
+            attach_menu.style.display = 'flex';
+        } else {
+            attachm.change_state('plus');
+            attach_menu.style.display = 'none';
+        }
+    }
 }
 
 attach_input.addEventListener('change', (e) => {
     const files = e.target.files;
+    console.log('hello everybody kjflksdjlkdfj');
+    console.log(files);
+    if (files && files.length > 0) {
+        console.log('akkjkjdhfjkdfkl');
+        const attach_img = document.getElementById('attach-img');
+        attach_img.src = 'https://cdn-icons-png.flaticon.com/128/1828/1828901.png';
+
+        const attachm = new Attachment();
+        attachm.show();
+        attach_dict = {};
+        for (let i = 0; i < files.length; i++) {
+            let file = files[i];
+            attach_dict[i] = file;
+            console.log(file.type+'kkkkkk');
+            if (['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml', 'image/avif', 'image/tiff', 'image/x-icon'].includes(file.type)) {
+                console.log('success');
+                attachm.create_cap(i, URL.createObjectURL(file));
+            } else if (['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/mpeg', 'video/3gpp', 'video/x-m4v'].includes(file.type)) {
+                attachm.create_mov(i, URL.createObjectURL(file));
+            } else {
+                let name;
+                let size;
+
+                if (file.name.length > 10) {
+                    name = file.name.slice(0, 10) + '...';
+                } else {
+                    name = file.name;
+                }
+
+                if (file.size > 1073741823) {
+                    size = (file.size / 1_073_741_824).toFixed(1) + 'GB';
+                } else if (file.size > 1048575) {
+                    size = (file.size / 1048576).toFixed(1) + 'MB';
+                } else if (file.size > 1023) {
+                    size = (file.size / 1024).toFixed(1) + "KB";
+                } else {
+                    size = file.size + 'B';
+                }
+
+                let type = file.name.split('.');
+                type = type[type.length-1];
+                console.log(type);
+                attachm.create_file(i, name, size, type);
+            }
+        }
+    }
 })
 
 send.onclick = async function() {
-    if (!input.value & !attach_menu.files[0]) {
-        console.log(input.value);
+    if (input.value.length < 1 & Object.values(attach_dict).length < 1) {
         return;
     }
     const formdata = new FormData();
     formdata.append('text', input.value);
-    for (file of attach_input.files) {
+    formdata.append('chat_id', current_chat_id);
+    formdata.append('chat_type', current_chat_type);
+    console.log(current_chat_id, current_chat_type);
+
+    for (let file of Object.values(attach_dict)) {
         formdata.append('files', file);
     }
-
+    console.log(attach_dict);
+    const response = await fetch('/chat/api/send_mess', {
+        'method': 'POST',
+        'body': formdata
+    });
+    const json = await response.json();
+    console.log(json.ok, json.detail);
 }
 
 /* MAIN DIALOG */
@@ -873,7 +978,6 @@ async function auto_update() {
     }
     try {
         let data = {last_sync_at: last_sync_at, all_chats_ids: all_chats_ids, all_private_chats_ids: all_private_chats_ids};
-        console.log(data);
         let response = await fetch('/chat/api/update', {
             method: 'POST',
             headers: {
@@ -883,12 +987,11 @@ async function auto_update() {
         })
         let json = await response.json();
         if (json.ok) {
-            last_sync_at = new Date().toISOString();
+            /* last_sync_at = new Date().toISOString(); */
 
             const chat = new Chat();
             for (chat_json of json.detail.chats.joined) {
                 if (!(chat_json.chat_id in all_chats_ids)) {
-                    console.log(chat_json.chat_id);
                     all_chats_ids.unshift(chat_json.chat_id);
                     all_chats[chat_json.chat_id] = chat_json;
                     chat.addstart_chat(type=chat_json.chat_type, chat_id=chat_json.chat_id, title=chat_json.title, username=chat_json.last_message, avatar=chat_json.avatar);
@@ -912,6 +1015,7 @@ async function auto_update() {
             response = await fetch('/chat/api/get_myself');
             json = await response.json();
             if (json.ok) {
+                me_info = json.detail;
                 const your_name = document.getElementById('user-name');
                 your_name.textContent = json.detail.name;
                 const settings = document.getElementById('settings');
@@ -923,26 +1027,62 @@ async function auto_update() {
             console.log(error);
         }
 
+    } catch (error) {
+        console.log(error);
+    } finally {
+        await new Promise(resolve => setTimeout(auto_update, 5000))
+    }
+}
+
+async function auto_update_dialog() {
+    console.log(11111111);
+    try {
         if (is_dialog_opened) {
-            data = {'last_sync_at': last_sync_at, 'type': current_chat_type, 'chat_id': current_chat_id, 'last_mess_created': last_mess_created};
-            console.log(data);
-            response = await fetch('/chat/api/get_mess', {
-                'method': 'POST',
-                'headers': {
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            console.log('hewudiwdghu');
-            json = await response.json();
-            let dd = new Dialog();
-            dd.create_title(json.ok+'\n'+json.detail, 'black');
+            console.log(mess_id_from, mess_id_until);
+            data = {'mess_id_from': mess_id_from, 'type': current_chat_type, 'chat_id': current_chat_id, 'mess_id_until': mess_id_until};
+                response = await fetch('/chat/api/get_mess', {
+                    'method': 'POST',
+                    'headers': {
+                        'Content-type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                json = await response.json();
+                console.log(json.ok, json.detail);
+                let dd = new Dialog();
+                console.log(json.detail.mess);
+                if (json.ok & json.detail.mess.length > 0) {
+                    mess_id_from = json.detail.mess[json.detail.mess.length-1].id;
+                    for (let i = 0; i < json.detail.mess.length; i++) {
+                        let message = json.detail.mess[i];
+                        let date = new Date(message.created_at);
+                        let hours = date.getUTCHours();
+                        let minutes = date.getUTCMinutes();
+                        let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
+
+                        if (message.mess_type == 'text') {
+                            messages_history[i] = message;
+                            dd.create_message(i, message.text, message.created_by == me_info.user_id, time);
+                        } else if (message.mess_type == 'capture') {
+                            dd.create_capture(i, message.text+'kjkjjj', message.created_by == me_info.user_id, time, message.link);
+                        } else if (message.mess_type == 'video') {
+                            dd.create_video(i, message.text, message.link, message.created_by == me_info.user_id, time);
+                        } else {
+                            dd.create_file(i, message.text, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
+                        }
+                    }
+                }
         }
     } catch (error) {
         console.log(error);
     } finally {
-        setTimeout(auto_update, 5000)
+        await new Promise(resolve => setTimeout(auto_update_dialog, 2000))
     }
 }
 
-auto_update();
+async function main() {
+    auto_update();
+    auto_update_dialog();
+}
+
+main();

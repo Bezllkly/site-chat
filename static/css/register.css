@@ -73,6 +73,7 @@ body {
     font-size: 20px;
 }
 .container {
+    margin-top: 20px;
     position: fixed;
     left: 50%;
     top: 50%;
@@ -80,14 +81,14 @@ body {
     background-color: #3a7dcb;
     display: flex;
     flex-direction: column;
-    width: 70%;
-    min-width: 300px;
-    max-width: 500px;
-    height: 40%;
+    width: 400px;
+    height: 400px;
+    aspect-ratio: 1 / 1;
     justify-content: center;     /* Горизонтальное центрирование */
     align-items: center;  
     gap: 10px;
-    border-radius: 40px;;
+    border-radius: 40px;
+    padding: 10px;
 }
 .container div {
     display: flex;
@@ -106,7 +107,7 @@ body {
     font-size: 1.3rem;
     background-color: #cacaca;
     border: none;
-    
+    border-radius: 10px;
     text-align: center;
 }
 .container #password {
@@ -124,8 +125,8 @@ body {
     background-color: #c7c7c7;
 }
 .container button {
-    width: 30%;
-    height: 15%;
+    width: 175px;
+    height: 75px;
     background-color: #13cbd1;
     border: none;
     border-radius: 20px;
@@ -133,6 +134,7 @@ body {
     font-size: 1.3rem;
     cursor: pointer;
     transition: background-colorm, border-bottom 0.1s, 0.0s linear 0.1s, 0.0s;
+    margin-top: 20px;
 }
 .container button:hover {
     background-color: #51f9ff;

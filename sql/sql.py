@@ -22,14 +22,11 @@ class Chat_type(enum.Enum):
     group = 'group'
     channel = 'channel'
 
-class Attach_type(enum.Enum):
+class Message_type(enum.Enum):
+    text = 'text'
     file = 'file'
     capture = 'capture'
     video = 'video'
-
-class Mess_state(enum.Enum):
-    sent = 'sent'
-    read = 'read'
 
 class Chat_roles(enum.Enum):
     member = 'member'
@@ -150,22 +147,23 @@ class Message(Base):
     id = Column(Integer, primary_key=True)
     created_by_id = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  , onupdate=datetime.now(timezone.utc)  )
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     text = Column(String, nullable=True)
-    attachment_type = Column(Enum(Attach_type), nullable=True)
-    attachment = Column(String, nullable=True)
-    state = Column(Enum(Mess_state), nullable=True)
+    type = Column(Enum(Message_type), nullable=True)
+    attachment_id = Column(Integer, ForeignKey('files.id'), nullable=True)
     is_read = Column(Boolean, default=False)
 
     chat_id = Column(Integer, ForeignKey('chats.chat_id', ondelete='CASCADE'), nullable=True)
     private_chat_id = Column(Integer, ForeignKey('private_chats.id', ondelete='CASCADE'), nullable=True)
 
+    attachment = relationship('File', uselist=False)
     chat = relationship('Chat', back_populates='messages', foreign_keys=[chat_id])
     private_chat = relationship('Private_Chat', back_populates='messages', foreign_keys=[private_chat_id])
     created_by = relationship('User', back_populates='messages', foreign_keys=[created_by_id])
     reply_to = relationship('Message', remote_side=[id], foreign_keys=[reply_to_id])
     replies = relationship('Message', back_populates='reply_to')
+
 
 class File(Base):
     __tablename__ = "files"
@@ -177,18 +175,23 @@ class File(Base):
     file_name = Column(String(255))
     file_origname = Column(String(255))
     file_type = Column(String(20))
-    file_size = Column(Integer) #kilobytes
+    file_size = Column(Integer)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     chat_id = Column(Integer, ForeignKey("chats.chat_id"), nullable=True)
     private_chat_id = Column(Integer, ForeignKey('private_chats.id'), nullable=True)
+    # !!! ВОТ ЭТУ СТРОКУ УДАЛИЛ !!!
+    # message_id = Column(Integer, ForeignKey('messages.id'), unique=True, nullable=True)
 
+    # !!! И ЭТУ СВЯЗЬ УДАЛИЛ !!!
+    message = relationship('Message', back_populates='attachment', uselist=False)
+    
     chat = relationship("Chat", back_populates='files', foreign_keys=[chat_id])
     private_chat = relationship('Private_Chat', back_populates='files', foreign_keys=[private_chat_id])
     user = relationship("User", back_populates='files', foreign_keys=[user_id])
     chatmember = relationship('ChatMember', back_populates='files', foreign_keys=[chatmember_id])
 
 '''
-UPDARE DATABASES
+UPDATE DATABASES
 '''
 async def update_all():
     async with engine.connect() as con:

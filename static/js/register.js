@@ -88,3 +88,8 @@ join.onclick = async function() {
         console,log(result);
     }
 }
+
+const container = document.getElementById('container');
+
+container.style.width = container.style.width;
+container.style.height = container.style.height;
