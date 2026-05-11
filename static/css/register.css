@@ -81,8 +81,8 @@ body {
     background-color: #3a7dcb;
     display: flex;
     flex-direction: column;
-    width: 400px;
-    height: 400px;
+    width: 500px;
+    height: 500px;
     aspect-ratio: 1 / 1;
     justify-content: center;     /* Горизонтальное центрирование */
     align-items: center;  
@@ -90,7 +90,11 @@ body {
     border-radius: 40px;
     padding: 10px;
 }
+.container h1 {
+    margin-bottom: 30px;
+}
 .container div {
+    width: 60%;
     display: flex;
     align-content: center;
     background-color: #cacaca;
@@ -98,23 +102,27 @@ body {
     border-bottom: 3px solid black;
 }
 .container div span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 25px;
+    flex: 0;
 }
 .container #username {
-    width: 90%;
     min-width: 200px;
-    height: 35px;
-    font-size: 1.3rem;
+    height: 45px;
+    font-size: 1.5rem;
     background-color: #cacaca;
     border: none;
     border-radius: 10px;
     text-align: center;
+    flex: 1;
 }
 .container #password {
-    width: 50%;
+    width: 60%;
     min-width: 270px;
-    height: 35px;
-    font-size: 1.3rem;
+    height: 45px;
+    font-size: 1.4rem;
     background-color: #cacaca;
     border: none;
     border-radius: 10px;
@@ -127,17 +135,17 @@ body {
 .container button {
     width: 175px;
     height: 75px;
-    background-color: #13cbd1;
+    background-color: #cb2ceb;
     border: none;
     border-radius: 20px;
     border-bottom: 3px solid black;
-    font-size: 1.3rem;
+    font-size: 1.6rem;
     cursor: pointer;
     transition: background-colorm, border-bottom 0.1s, 0.0s linear 0.1s, 0.0s;
     margin-top: 20px;
 }
 .container button:hover {
-    background-color: #51f9ff;
+    background-color: #d60cff;
     border-bottom: 1px solid black;
 }
 .container button:active {

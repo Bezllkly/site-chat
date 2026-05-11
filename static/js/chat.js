@@ -10,10 +10,13 @@ let current_chat_id;
 let messages_history = [];
 let mess_id_until;
 let mess_id_from;
-
+let is_opened_now;
 let attach_dict = {};
 
 let me_info = {}; 
+
+const internet_state = document.getElementById('internet-state');
+internet_state.textContent = 'Loading...';
 
 const chat_el = document.getElementById('chat');
 const chat_bar = document.getElementById('chat-bar');
@@ -44,11 +47,12 @@ class Dialog {
         messages_history = [];
         current_chat_type = type;
         current_chat_id = chat_id;
+        is_opened_now = true;
 
         const chat = document.getElementById('chat');
         const chat_bar = document.getElementById('chat-bar');
         const input_div = document.getElementById('input-div');
-        chat.style.display = 'inline';
+        chat.style.display = 'flex';
         chat_bar.style.display = 'flex';
         input_div.style.display = 'flex';
 
@@ -64,6 +68,7 @@ class Dialog {
         el_avatar.src = "https://cdn-icons-png.flaticon.com/128/12067/12067335.png";
 
         this.clear_dialog();
+        this.create_title('Loading...', 'black');
         const chat_bar_back = document.getElementById('chat-bar-back');
         if (window.innerWidth > 600) {
             chat_bar_back.style.display = 'none';
@@ -250,7 +255,7 @@ class Dialog {
         dialog.appendChild(capture);
     }
 
-    create_file(mes_id, text=null, file_name, file_size, file_type, is_me, time) {
+    create_file(mes_id, text=null, mess_type, file_name, file_size, file_type, is_me, time) {
         const file = document.createElement("div");
         file.classList.add("file");
         file.id = mes_id;
@@ -258,7 +263,13 @@ class Dialog {
         dialog_file.classList.add("dialog-file");
 
         let img = document.createElement('img')
-        img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
+        if (mess_type == 'file') {
+            img.src = "https://cdn-icons-png.flaticon.com/128/2258/2258853.png";
+        } else if (mess_type == 'capture') {
+            img.src = "https://cdn-icons-png.flaticon.com/128/9284/9284918.png";
+        } else {
+            img.src = "https://cdn-icons-png.flaticon.com/128/3024/3024584.png";
+        }
         let h4 = document.createElement('h4');
         if (file_name.length > 15) {
             h4.textContent = file_name.slice(0, 15) + '...';
@@ -311,10 +322,11 @@ class Dialog {
             img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
             img.id = 'img-'+mes_id;
             mes_state.appendChild(img);
+            mes_state.style.justifyContent = 'end';
             file.style.backgroundColor = "#cb2ceb";
             file.style.marginLeft = "auto";
             file.style.marginRight = "0px";
-            dialog_file.style.backgroundColor = "#9535a8"
+            dialog_file.style.backgroundColor = "#ca43e6"
         }
 
         file.appendChild(mes_state);
@@ -352,7 +364,7 @@ class Dialog {
             img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
             img.id = 'img-'+mes_id;
             mess_state.appendChild(img);
-            mess_state.appendChild(img);
+            mess_state.style.justifyContent = 'end';
             video.style.backgroundColor = "#cb2ceb";
             video.style.marginLeft = "auto";
             video.style.marginRight = "0px";
@@ -978,38 +990,45 @@ async function auto_update() {
     }
     try {
         let data = {last_sync_at: last_sync_at, all_chats_ids: all_chats_ids, all_private_chats_ids: all_private_chats_ids};
-        let response = await fetch('/chat/api/update', {
-            method: 'POST',
-            headers: {
-                "Content-type": 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        let json = await response.json();
-        if (json.ok) {
-            /* last_sync_at = new Date().toISOString(); */
+        try {
+            let response = await fetch('/chat/api/update', {
+                method: 'POST',
+                headers: {
+                    "Content-type": 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            let json = await response.json();
+            if (json.ok) {
+                internet_state.textContent = 'NoShare';
+                /* last_sync_at = new Date().toISOString(); */
 
-            const chat = new Chat();
-            for (chat_json of json.detail.chats.joined) {
-                if (!(chat_json.chat_id in all_chats_ids)) {
-                    all_chats_ids.unshift(chat_json.chat_id);
-                    all_chats[chat_json.chat_id] = chat_json;
-                    chat.addstart_chat(type=chat_json.chat_type, chat_id=chat_json.chat_id, title=chat_json.title, username=chat_json.last_message, avatar=chat_json.avatar);
+                const chat = new Chat();
+                for (chat_json of json.detail.chats.joined) {
+                    if (!(chat_json.chat_id in all_chats_ids)) {
+                        all_chats_ids.unshift(chat_json.chat_id);
+                        all_chats[chat_json.chat_id] = chat_json;
+                        chat.addstart_chat(type=chat_json.chat_type, chat_id=chat_json.chat_id, title=chat_json.title, username=chat_json.last_message, avatar=chat_json.avatar);
+                    }
+                }
+                for (chat_id of json.detail.chats.leaved) {
+                    if (chat_id in all_chats_ids) {
+                        all_chats_ids = all_chats_ids.filter(item => item != chat_id);
+                        delete all_chats[chat_id];
+                        chat.delete_chat(chat_id);
+                    }
+                }
+                for (chat_json of json.detail.chats.modified) {
+                    if (chat_json.chat_id in all_chats_ids) {
+                        chat.update_chat(chat_id=chat_json.chat_id, title=chat_json.title, last_message=chat_json.last_message, count_messages=chat_json.count_messages, avatar=chat_json.avatar);
+                    }
                 }
             }
-            for (chat_id of json.detail.chats.leaved) {
-                if (chat_id in all_chats_ids) {
-                    all_chats_ids = all_chats_ids.filter(item => item != chat_id);
-                    delete all_chats[chat_id];
-                    chat.delete_chat(chat_id);
-                }
-            }
-            for (chat_json of json.detail.chats.modified) {
-                if (chat_json.chat_id in all_chats_ids) {
-                    chat.update_chat(chat_id=chat_json.chat_id, title=chat_json.title, last_message=chat_json.last_message, count_messages=chat_json.count_messages, avatar=chat_json.avatar);
-                }
-            }
+        } catch (error) {
+            internet_state.textContent = 'Waiting for network...';
+            console.log(error);
         }
+        
 
         try {
             response = await fetch('/chat/api/get_myself');
@@ -1030,7 +1049,7 @@ async function auto_update() {
     } catch (error) {
         console.log(error);
     } finally {
-        await new Promise(resolve => setTimeout(auto_update, 5000))
+        await new Promise(resolve => setTimeout(auto_update, 2000))
     }
 }
 
@@ -1051,7 +1070,11 @@ async function auto_update_dialog() {
                 console.log(json.ok, json.detail);
                 let dd = new Dialog();
                 console.log(json.detail.mess);
-                if (json.ok & json.detail.mess.length > 0) {
+                if (json.ok && is_opened_now) {
+                    dd.clear_dialog()
+                    is_opened_now = false;
+                }
+                if (json.ok & json.detail.mess.length > 0) { 
                     mess_id_from = json.detail.mess[json.detail.mess.length-1].id;
                     for (let i = 0; i < json.detail.mess.length; i++) {
                         let message = json.detail.mess[i];
@@ -1063,12 +1086,12 @@ async function auto_update_dialog() {
                         if (message.mess_type == 'text') {
                             messages_history[i] = message;
                             dd.create_message(i, message.text, message.created_by == me_info.user_id, time);
+                        } else if (message.mess_type == 'file' || (message.file_width/message.file_height > 2 || message.file_height/message.file_width > 2)) {
+                            dd.create_file(i, message.text, message.mess_type, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
                         } else if (message.mess_type == 'capture') {
-                            dd.create_capture(i, message.text+'kjkjjj', message.created_by == me_info.user_id, time, message.link);
+                            dd.create_capture(i, message.text, message.created_by == me_info.user_id, time, message.link);
                         } else if (message.mess_type == 'video') {
                             dd.create_video(i, message.text, message.link, message.created_by == me_info.user_id, time);
-                        } else {
-                            dd.create_file(i, message.text, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
                         }
                     }
                 }

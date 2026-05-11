@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/css/chat.css">
     <title>Chats</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
     <div id="create-chat-background">
@@ -42,11 +43,12 @@
         </div>
     </div>
 
+    <div class="origin">
     <header class="title">
         <div>
             <a href="/" id="title">
                 <img class="image-icon" src="/static/img/favicon.ico" title="menu">
-                <span class="text">Mini-chat</span>
+                <span id="internet-state" class="text">NoShare</span>
             </a>
         </div>
         <div id="search-div">
@@ -61,107 +63,63 @@
         </div>
     </header>
 
-    <section class="main">
-        <button id="create-chat">
-                <img src="https://cdn-icons-png.flaticon.com/128/10103/10103630.png" title="create">
-        </button>
-        <div id="list-of-chats" class="list_of_chats">
-            <button title=".">
-                <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
-                <div>
-                    <h2>Global chat</h2>
-                    <span>Nothing...</span>
-                </div>
-            </button>――――――――――――
-
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
+        <section class="main">
+            <button id="create-chat">
+                    <img src="https://cdn-icons-png.flaticon.com/128/10103/10103630.png" title="create">
             </button>
-        </div>
-        <div id="chat" class="chat">
-            <div id="chat-bar" class="chat-bar">
-                <div>
-                    <img id="chat-bar-back" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/271/271220.png" title="back">
-                    <div id="chat-bar-info">
-                        <img id="chat-avatar" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
-                        <span id="chat-name">Chat_name</span>
+            <div id="list-of-chats" class="list_of_chats">
+                <button title=".">
+                    <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
+                    <div>
+                        <h2>Global chat</h2>
+                        <span>Nothing...</span>
                     </div>
-                </div>
-                <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/2311/2311524.png" title="more">
-            </div>
+                </button>――――――――――――
 
-            <div id="input-div" class="input-div">
-                <div>
-                    <div id="chat-join">Join</div>
-                    <input type="text" id="input" placeholder="Message">
-                    <button id="minimize" title="minimize" style="display: none;">
-                        <img src="https://cdn-icons-png.flaticon.com/128/7787/7787505.png" title="minimize">
-                    </button>
-                    <button id="attach" title="attachment">
-                        <img src="https://cdn-icons-png.flaticon.com/128/9941/9941021.png" title="attachment" id="attach-img">
-                        <input type="file" id="attach-input" aria-label="dk" multiple style="display: none;">
-                    </button>
-                    <button title="send" id="send">
-                        <img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" title="send">
-                    </button>
-                </div>
-                <div id="attach-menu" class="attach">
-                </div>
+                <button title=".">
+                    <img class="chat-icon" src="img/directory.png" title="icon">
+                    <div>
+                        <h2>second shit</h2>
+                        <span>long description</span>н
+                    </div>
+                </button>
             </div>
-
-            <div id="dialog" class="dialog">
-                <div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <div style="justify-content: end;" class="mess-state">
-                        <h6>17:40</h6>
-                        <img src="https://cdn-icons-png.flaticon.com/128/13132/13132581.png" title="sent">
-                    </div>
-                </div>
-                <div class="capture">
-                    <img class="dialog-img" src="https://avatars.mds.yandex.net/i?id=7bacd0a964fd0850601dde29dad675797a490dca-10878212-images-thumbs&n=13" title="capture">
-                    <h4>Description         lolllll?????????</h4>
-                    <div class="mess-state">
-                        <h6>17:41</h6>
-                        <img src="https://cdn-icons-png.flaticon.com/128/13132/13132581.png" title="sent">
-                    </div>
-                </div>
-                <div class="file">
-                    <div class="dialog-file">
-                        <img src="https://cdn-icons-png.flaticon.com/128/2258/2258853.png" title="file">
-                        <div class="dialog-file-info">
-                            <h4>File_name.apk</h4>
-                            <div>
-                                <span>size</span>
-                                <span>type</span>
-                            </div>
+            <div id="chat" class="chat">
+                <div id="chat-bar" class="chat-bar">
+                    <div>
+                        <img id="chat-bar-back" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/271/271220.png" title="back">
+                        <div id="chat-bar-info">
+                            <img id="chat-avatar" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
+                            <span id="chat-name">Chat_name</span>
                         </div>
                     </div>
-                    <h4>Заценi прiложенiе</h4>
-                    <div class="mess-state">
-                        <h6>17:50</h6>
-                        <img src="https://cdn-icons-png.flaticon.com/128/13132/13132581.png" title="sent">
-                    </div>
+                    <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/2311/2311524.png" title="more">
                 </div>
-                <div class="video">
-                    <div class="dialog-video">
-                        <video controls width="640" height="360">
-                            <source src="/files/f/%D0%BE%D0%BF%D0%B5%D0%BD%D0%B8%D0%BD%D0%B3%201.mp4" type="video/mp4">
-                            Ваш браузер не поддерживает тег video.
-                        </video>
+
+                <div id="dialog" class="dialog">
+                </div>
+
+                <div id="input-div" class="input-div">
+                    <div>
+                        <div id="chat-join">Join</div>
+                        <input type="text" id="input" placeholder="Message">
+                        <button id="minimize" title="minimize" style="display: none;">
+                            <img src="https://cdn-icons-png.flaticon.com/128/7787/7787505.png" title="minimize">
+                        </button>
+                        <button id="attach" title="attachment">
+                            <img src="https://cdn-icons-png.flaticon.com/128/9941/9941021.png" title="attachment" id="attach-img">
+                            <input type="file" id="attach-input" aria-label="dk" multiple style="display: none;">
+                        </button>
+                        <button title="send" id="send">
+                            <img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" title="send">
+                        </button>
                     </div>
-                    <h4>4k Video</h4>
-                    <div class="mess-state">
-                        <h6>14:88</h6>
-                        <img src="https://cdn-icons-png.flaticon.com/128/13132/13132581.png" title="sent">
+                    <div id="attach-menu" class="attach">
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </div>
     <script src="static/js/chat.js"></script>
 </body>
 </html>

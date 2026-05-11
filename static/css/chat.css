@@ -23,6 +23,13 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
 body {
   height:100%;
   user-select: none;
@@ -32,6 +39,13 @@ body {
   margin: 0;
   font-family: "Comic Sans MS", sans-serif;
   overflow: hidden;
+}
+
+.origin {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 }
 
 .title {
@@ -44,6 +58,7 @@ body {
     background-color: #cacaca;
     border-radius: 0px, 0px, 15px, 15px;
     border-bottom: 2px solid black;
+    flex: 0;
 }
 
 .title div {
@@ -118,7 +133,9 @@ body {
 
 .main {
     display: flex;
-    height: calc(100vh - 50px);
+    height: 70%;
+    max-height: 100%;
+    flex: 1;
 }
 .list_of_chats {
     display: flex;
@@ -136,8 +153,11 @@ body {
     overflow-y: auto;
 }
 .chat {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     min-width: 100px;
+    height: 100%;
     background-image: url(https://img.freepik.com/premim-photo/abstract-colorful-bent-paper-background-design_851755-6183.jpg?semt=ais_hybrid&w=740&q=80);
     background-size: cover;
     flex: 1;
@@ -432,20 +452,19 @@ body {
 }
 
 .input-div {
-    position: fixed;
-    width: 60%;
-    max-width: 600px;
-    height: auto;
-    bottom: 5%;
-    margin-left: 5%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     display: flex;
     flex-direction: column-reverse;
     gap: 5px;
-
-    z-index: 100; 
+    margin-bottom: 20px;
+    flex: 0;
 }
 .input-div div {
+    width: 100%;
     display: flex;
+    justify-content: center;
     gap: 5px;
 }
 .input-div #chat-join {
@@ -461,8 +480,8 @@ body {
 }
 .input-div input {
     background-color: #cacaca;
-    width: 60%;
-    height: 100%;
+    width: 80%;
+    max-width: 400px;
     border: none;
     border-radius: 20px;
     border-bottom: 3px solid black;
@@ -499,9 +518,6 @@ body {
 .attach {
     background-color: #c2c2c2;
     width: max-content;
-    min-width: 100%;
-    max-width: 100%;
-    max-height: 30%;
     display: grid;
     grid-template-columns: repeat(3, auto);
     grid-auto-flow: row;
@@ -588,8 +604,7 @@ body {
 .dialog {
     display: flex;
     width: 100%;
-    height: 100%;
-    max-height: 85%;
+    height: auto;
     flex-direction: column;
     justify-content: start;
     padding: 10px;
@@ -597,7 +612,8 @@ body {
     overflow-y: scroll;
     white-space: nowrap;
     border-bottom: 2px solid #000000;
-    border-radius: 30px;
+    border-radius: 20px;
+    flex: 1;
 }
 .dialog .message {
     justify-items: end;
@@ -644,7 +660,7 @@ body {
 }
 .dialog .capture {
     width: max-content;
-    max-width: 80%;
+    max-width: 500px;
     background-color: #cacaca;
     border: none;
     border-radius: 20px;
@@ -654,9 +670,9 @@ body {
 }
 .dialog-img {
     display: block;
-    width: 100%;
-    max-width: 700px;
-    height: 100%;
+    width: auto;
+    max-width: 400px;
+    height: auto;
     justify-self: center;
     border: none;
     border-radius: 20px;
@@ -744,6 +760,8 @@ body {
     border-radius: 10px;
 }
 .video h4 {
+    user-select: text;
+    -webkit-user-select: text;
     font-weight: 100;
     margin-left: 5px;
     word-wrap: break-word;      

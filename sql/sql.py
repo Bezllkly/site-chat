@@ -179,6 +179,8 @@ class File(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     chat_id = Column(Integer, ForeignKey("chats.chat_id"), nullable=True)
     private_chat_id = Column(Integer, ForeignKey('private_chats.id'), nullable=True)
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
     # !!! ВОТ ЭТУ СТРОКУ УДАЛИЛ !!!
     # message_id = Column(Integer, ForeignKey('messages.id'), unique=True, nullable=True)
 
