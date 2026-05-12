@@ -146,9 +146,11 @@ async def registration(response: Response, request: Request, user: Post_Session)
         print('Ошибка запроса к домену ipinfo.io')
         country = None
         region = None
-    answer_json = answer.json()
-    country = answer_json.get('country')
-    region = answer_json.get('region')
+    else:
+        answer_json = answer.json()
+        country = answer_json.get('country')
+        region = answer_json.get('region')
+
     user_agent = request.headers.get('user-agent')
 
     async with sql.as_session() as session:
@@ -295,6 +297,7 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
             else:
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), type=sql.Message_type.text)
                 new_objs.append(new_mess)
+                print(datetime.now(timezone.utc))
             
             as_session.add_all(new_objs)
             await as_session.commit()

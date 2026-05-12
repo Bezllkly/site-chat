@@ -12,7 +12,10 @@ DB_LINK = os.getenv('DBLINK')
 
 engine = create_async_engine(
     url=DB_LINK,
-    echo=False
+    echo=False,
+    connect_args={
+        "server_settings": {"timezone": "UTC"}
+    }
 )
 
 as_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -56,8 +59,8 @@ class User(Base):
     description = Column(String(100), nullable=True)
 
     is_active = Column(Boolean, default=True)
-    last_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    last_seen = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     chatsadmin = relationship('Chat', back_populates='creator', cascade="all, delete-orphan")
     messages = relationship("Message", back_populates='created_by')
@@ -73,12 +76,12 @@ class Session(Base):
     id = Column(Integer, primary_key=True)
     token = Column(String(64), unique=True)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
-    last_visit_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    last_visit_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     country = Column(String(10))
     region = Column(String(20))
 
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
-    expires_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)   + timedelta(days=30), onupdate=datetime.now(timezone.utc)   + timedelta(days=30))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)  )
+    expires_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)   + timedelta(days=30), onupdate=lambda: datetime.now(timezone.utc)   + timedelta(days=30))
     user_agent = Column(String(255), nullable=True)
     ip_address = Column(String(15), nullable=True) 
     user = relationship('User', back_populates='sessions')
@@ -98,8 +101,8 @@ class ChatMember(Base):
     user_id = Column(Integer, ForeignKey('users.user_id'))
     chat_id = Column(Integer, ForeignKey('chats.chat_id'))
 
-    joined_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    last_read_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    joined_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    last_read_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     role = Column(Enum(Chat_roles), default=Chat_roles.member)
 
     user = relationship('User', back_populates='chats', foreign_keys=[user_id])
@@ -116,7 +119,7 @@ class Chat(Base):
     title = Column(String(50))
     description = Column(String(200), nullable=True)
     created_by = Column(Integer, ForeignKey('users.user_id'), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)  )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)  )
     avatar = Column(String(100), nullable=True)
     last_message_id = Column(Integer, nullable=True)
     last_message_content = Column(String(10), nullable=True)
@@ -130,7 +133,7 @@ class Private_Chat(Base):
     __tablename__ = 'private_chats'
 
     id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     last_message_id = Column(Integer, nullable=True)
     last_message_content = Column(String(10), nullable=True)
     user1_id = Column(Integer, ForeignKey('users.user_id'))
@@ -147,8 +150,8 @@ class Message(Base):
     id = Column(Integer, primary_key=True)
     created_by_id = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True, index=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     text = Column(String, nullable=True)
     type = Column(Enum(Message_type), nullable=True)
     attachment_id = Column(Integer, ForeignKey('files.id'), nullable=True)
@@ -176,7 +179,7 @@ class File(Base):
     file_origname = Column(String(255))
     file_type = Column(String(20))
     file_size = Column(Integer)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     chat_id = Column(Integer, ForeignKey("chats.chat_id"), nullable=True)
     private_chat_id = Column(Integer, ForeignKey('private_chats.id'), nullable=True)
     width = Column(Integer, nullable=True)
