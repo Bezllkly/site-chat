@@ -57,6 +57,9 @@ class Update(BaseModel):
     all_chats_ids: list
     all_private_chats_ids: list
 
+class Post_readmess(BaseModel):
+    mess_id: int
+
 router = APIRouter(prefix='/chat',
                    tags=['chat'])
 
@@ -908,7 +911,7 @@ async def get_myself(session = Cookie(default=None)):
                                    'name': user.name}}
 
 @router.post('/api/update')
-async def update(update_data: Update, session = Cookie(default=None)):
+async def post_update(update_data: Update, session = Cookie(default=None)):
     if not session:
         return {'ok': False, 'detail': 'Nor authorized'}
     last_sync_at = datetime.fromisoformat(update_data.last_sync_at.replace('Z', '+00:00'))
@@ -943,6 +946,30 @@ async def update(update_data: Update, session = Cookie(default=None)):
     
     print(chats)
     return {'ok': True, 'detail': chats}
+
+@router.post('/api/read_mess') #only private chats
+async def read_mess(chat: Post_readmess, session = Cookie(default=None)):
+    if not session:
+        return {'ok': False, 'detail': 'Not authorized'}
+    
+    async with sql.as_session() as as_session:
+        session_db = (await as_session.execute(select(sql.Session).filter_by(token=session))).scalar_one_or_none()
+        if not session_db or session_db.expires_at < datetime.now(timezone.utc):
+            return {'ok': False, 'detail': 'Not authorized'}
+        
+        message = (await as_session.execute(select(sql.Message).filter_by(id=chat.mess_id))).scalar_one_or_none()
+        if not message:
+            return {'ok': False, 'detail': 'Not found'}
+        if message.created_by_id == session_db.user_id:
+            return {'ok': False, 'detail': 'Wrong'}
+
+        private_chat = (await as_session.execute(select(sql.Private_Chat).filter_by(id=message.private_chat_id).where(or_(sql.Private_Chat.user1_id == session_db.user_id, sql.Private_Chat.user2_id == session_db.user_id)))).scalar_one_or_none()
+        if not private_chat:
+            return {'ok': False, 'detail': 'Not found'}
+        
+        stmt = update(sql.Message).where(and_(sql.Message.private_chat_id == message.private_chat_id, sql.Message.id <= message.id)).values(is_read=True)
+        await as_session.execute(stmt)
+        await as_session.commit()
 
 @router.get('/del')
 async def delete_cookie(response: Response, session: Optional[str] = Cookie(default=None)):

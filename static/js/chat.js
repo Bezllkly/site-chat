@@ -12,8 +12,31 @@ let mess_id_until;
 let mess_id_from;
 let is_opened_now;
 let attach_dict = {};
+let prev_id_read = 0;
 
 let me_info = {}; 
+
+async function markMessageAsRead(mess_id) {
+    console.log(mess_id);
+    const data = {'mess_id': mess_id};
+    const response = await fetch('chat/api/read_mess', {
+        'method': 'POST',
+        'headers': {'Content-type': 'application/json'},
+        'body': JSON.stringify(data)
+    })
+}
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const messageElement = entry.target;
+            markMessageAsRead(messageElement.id);
+            observer.unobserve(messageElement);
+        }
+    });
+}, {
+    threshold: 1
+});
 
 const internet_state = document.getElementById('internet-state');
 internet_state.textContent = 'Loading...';
@@ -48,6 +71,7 @@ class Dialog {
         current_chat_type = type;
         current_chat_id = chat_id;
         is_opened_now = true;
+        prev_id_read = 0;
 
         const chat = document.getElementById('chat');
         const chat_bar = document.getElementById('chat-bar');
@@ -212,6 +236,10 @@ class Dialog {
         }
         message.appendChild(mess_state);
         dialog.appendChild(message);
+
+        if (!is_me && current_chat_type == 'private') {
+            observer.observe(message);
+        }
     }
 
     create_capture(mes_id, text=null, is_me, time, capture_link) {
@@ -319,7 +347,7 @@ class Dialog {
         mes_state.appendChild(h6);
         if (is_me) {
             img = document.createElement('img');
-            img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
+            img.src = "https://cdn-icons-png.flaticon.com/128/18729/18729943.png";
             img.id = 'img-'+mes_id;
             mes_state.appendChild(img);
             mes_state.style.justifyContent = 'end';
@@ -1085,22 +1113,35 @@ async function auto_update_dialog() {
                         let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
 
                         if (message.mess_type == 'text') {
-                            messages_history[i] = message;
-                            dd.create_message(i, message.text, message.created_by == me_info.user_id, time);
+                            messages_history[message.id] = message;
+                            dd.create_message(message.id, message.text, message.created_by == me_info.user_id, time);
                         } else if (message.mess_type == 'file' || (message.file_width/message.file_height > 2 || message.file_height/message.file_width > 2)) {
-                            dd.create_file(i, message.text, message.mess_type, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
+                            dd.create_file(message.id, message.text, message.mess_type, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
                         } else if (message.mess_type == 'capture') {
-                            dd.create_capture(i, message.text, message.created_by == me_info.user_id, time, message.link);
+                            dd.create_capture(message.id, message.text, message.created_by == me_info.user_id, time, message.link);
                         } else if (message.mess_type == 'video') {
-                            dd.create_video(i, message.text, message.link, message.created_by == me_info.user_id, time);
+                            dd.create_video(message.id, message.text, message.link, message.created_by == me_info.user_id, time);
                         }
                     }
+                    for (let message_id of Object.keys(messages_history)) {
+                        if (message_id > prev_id_read) {
+                            let obj = document.getElementById(message_id);
+                            let mess_state = obj.querySelector('.mess-state');
+                            let img = mess_state.querySelector('img');
+                            img.src = 'https://cdn-icons-png.flaticon.com/128/5619/5619967.png';
+                            
+                            if (message_id == json.detail.last_read_id) {
+                                break;
+                            }
+                        }
+                    }
+                    prev_id_read = json.detail.last_read_id;
                 }
         }
     } catch (error) {
         console.log(error);
     } finally {
-        await new Promise(resolve => setTimeout(auto_update_dialog, 2000))
+        await new Promise(resolve => setTimeout(auto_update_dialog, 1000))
     }
 }
 
