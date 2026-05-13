@@ -252,7 +252,7 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                         width = None
                         height = None
 
-                    new_file = sql.File(width=width, height=height, file_name=file_name_db, chatmember_id=chatmember_db.id, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, private_chat_id=int(private_chat.id))
+                    new_file = sql.File(width=width, height=height, file_name=file_name_db, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, private_chat_id=int(private_chat.id))
                     as_session.add(new_file)
                     await as_session.flush()
                     new_mess = sql.Message(created_by_id=session_db.user_id, private_chat_id=int(private_chat.id), attachment_id=new_file.id, type=mess_type)
@@ -289,7 +289,7 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                     width = None
                     height = None
 
-                new_file = sql.File(width=width, height=height, file_name=file_name_db, chatmember_id=chatmember_db.id, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, private_chat_id=int(private_chat.id))
+                new_file = sql.File(width=width, height=height, file_name=file_name_db, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, private_chat_id=int(private_chat.id))
                 as_session.add(new_file)
                 await as_session.flush()
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), attachment_id=new_file.id, type=mess_type)
@@ -398,6 +398,105 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
             as_session.add_all(new_objs)
             await as_session.commit()
             return {'ok': True, 'detail': 'Good'}
+    else: #channel
+        async with sql.as_session() as as_session:
+            session_db = (await as_session.execute(select(sql.Session).filter_by(token=session))).scalar_one_or_none()
+            if not session_db or session_db.expires_at < datetime.now(timezone.utc):
+                return {'ok': False, 'detail': 'Not authorized'}
+            chatmember_db = (await as_session.execute(select(sql.ChatMember).filter_by(user_id=session_db.user_id, chat_id=int(chat_id)))).scalar_one_or_none()
+            if not chatmember_db:
+                return {'ok': False, 'detail': 'Not chatmember'}
+            
+            if chatmember_db.role == 'member':
+                return {'ok': False, 'detail': 'No rights'}
+            
+            chat_db = (await as_session.execute(select(sql.Chat).filter_by(chat_id=int(chat_id)).filter(sql.Chat.members.any(sql.ChatMember.user_id==session_db.user_id)))).scalar_one_or_none()
+            if not chat_db:
+                return {'ok': False, 'detail': 'didnt join'}
+            
+            new_objs = []
+            if files and len(files) > 1:
+                for file in files:
+                    if file.size > 1073741824:
+                        continue
+
+                    mime_type = file.content_type
+                    mess_type = sql.Message_type.capture if mime_type.startswith('image/') else sql.Message_type.video if mime_type.startswith('video/') else sql.Message_type.file 
+
+                    file_origname = file.filename
+                    file_type = os.path.splitext(file.filename)[1].lower()
+                    file_name_db = secrets.token_urlsafe(16) + file_type
+                    try:
+                        os.makedirs(os.path.join('attach_files', str(chat_id)))
+                    except:
+                        pass
+                    
+                    file_path = os.path.join('attach_files', str(chat_id), file_name_db)
+
+                    with open(file_path, 'wb') as buffer:
+                        shutil.copyfileobj(file.file, buffer)
+                    
+                    if mess_type in (sql.Message_type.capture, sql.Message_type.video):
+                        size = get_file_quality(file_path, mess_type)
+                        if size:
+                            width, height = size
+                        else:
+                            return {'ok': False, 'detail': 'Wrong file type'}
+                    else:
+                        width = None
+                        height = None
+                    
+                    new_file = sql.File(width=width, height=height, file_name=file_name_db, chatmember_id=chatmember_db.id, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, chat_id=int(chat_id))
+                    as_session.add(new_file)
+                    await as_session.flush()
+                    new_mess = sql.Message(created_by_id=session_db.user_id, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
+                    new_objs.append(new_mess)
+                if text:
+                    new_message = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
+                    new_objs.append(new_message)
+            elif files:
+                file = files[0]
+                if file.size > 1073741824:
+                    return {'ok': False, 'detail': 'The file is too large'}
+
+                mime_type = file.content_type
+                mess_type = sql.Message_type.capture if mime_type.startswith('image/') else sql.Message_type.video if mime_type.startswith('video/') else sql.Message_type.file
+
+                file_origname = file.filename
+                file_type = os.path.splitext(file.filename)[1].lower()
+                file_name_db = secrets.token_urlsafe(16) + file_type
+                try:
+                    os.makedirs(os.path.join('attach_files', str(chat_id)))
+                except:
+                    pass
+                
+                file_path = os.path.join('attach_files', str(chat_id), file_name_db)
+                with open(file_path, 'wb') as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+
+                if mess_type in (sql.Message_type.capture, sql.Message_type.video):
+                    size = get_file_quality(file_path, mess_type)
+                    if size:
+                        width, height = size
+                    else:
+                        return {'ok': False, 'detail': 'Wrong file type'}
+                else:
+                    width = None
+                    height = None
+
+                new_file = sql.File(width=width, height=height, file_name=file_name_db, chatmember_id=chatmember_db.id, user_id=session_db.user_id, file_path=file_path, file_origname=file_origname, file_type=file_type, file_size=file.size, chat_id=int(chat_id))
+                as_session.add(new_file)
+                await as_session.flush()
+                new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
+                new_objs.append(new_mess)
+            else:
+                new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
+                new_objs.append(new_mess)
+
+            as_session.add_all(new_objs)
+            await as_session.commit()
+            return {'ok': True, 'detail': 'Good'}
+        
 
 @router.post('/api/join_chat')
 async def join_chat(chat: Post_join, session= Cookie(default=None)):
@@ -619,7 +718,7 @@ async def get_file(chat_id: str, file_path: str, session = Cookie(default=None))
     
         file = (await as_session.execute(select(sql.File).filter_by(chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.chat).selectinload(sql.Chat.members)))).scalar_one_or_none()
     if not file:
-        file = (await as_session.execute(select(sql.File).filter_by(chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.private_chat)))).scalar_one_or_none()
+        file = (await as_session.execute(select(sql.File).filter_by(private_chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.private_chat)))).scalar_one_or_none()
         if not file:
             return {'ok': False, 'detail': 'No result'}
         else:
@@ -646,9 +745,14 @@ async def get_file(chat_id: str, file_path: str, session = Cookie(default=None))
         if not query or query.expires_at < datetime.now(timezone.utc):
             return {'ok': False, 'detail': 'Session is expired'}
     
-        file = (await as_session.execute(select(sql.File).filter_by(user_id=query.user.user_id, chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.chat).selectinload(sql.Chat.members)))).scalar_one_or_none()
+        file = (await as_session.execute(select(sql.File).filter_by(chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.chat).selectinload(sql.Chat.members)))).scalar_one_or_none()
     if not file:
-        return {'ok': False, 'detail': 'No results'}
+        file = (await as_session.execute(select(sql.File).filter_by(private_chat_id=chat_id, file_name=file_path).options(selectinload(sql.File.private_chat)))).scalar_one_or_none()
+        if not file:
+            return {'ok': False, 'detail': 'No result'}
+        else:
+            if query.user_id != file.private_chat.user1_id and query.user_id != file.private_chat.user2_id:
+                return {'ok': False, 'detail': 'No result'}
     
     return {'ok': True, 'detail': {'orig_name': file.file_origname, "type": file.file_type, 'size': file.file_size}}
 

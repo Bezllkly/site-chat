@@ -1025,7 +1025,7 @@ async function auto_update() {
                 }
             }
         } catch (error) {
-            internet_state.textContent = 'Waiting for network...';
+            internet_state.textContent = 'Connecting...';
             console.log(error);
         }
         

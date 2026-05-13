@@ -172,7 +172,7 @@ class File(Base):
     __tablename__ = "files"
 
     id = Column(Integer, primary_key=True)
-    chatmember_id = Column(Integer, ForeignKey('chat_members.id'))
+    chatmember_id = Column(Integer, ForeignKey('chat_members.id'), nullable=True)
     user_id = Column(Integer, ForeignKey('users.user_id'))
     file_path = Column(String(255), unique=True)
     file_name = Column(String(255))
