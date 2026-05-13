@@ -1078,9 +1078,10 @@ async function auto_update_dialog() {
                     mess_id_from = json.detail.mess[json.detail.mess.length-1].id;
                     for (let i = 0; i < json.detail.mess.length; i++) {
                         let message = json.detail.mess[i];
+                        console.log(message.created_at);
                         let date = new Date(message.created_at);
-                        let hours = date.getUTCHours();
-                        let minutes = date.getUTCMinutes();
+                        let hours = date.getHours();
+                        let minutes = date.getMinutes();
                         let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
 
                         if (message.mess_type == 'text') {
