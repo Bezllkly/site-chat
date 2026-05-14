@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase, Mapped, relationship, mapped_column, joinedload, selectinload, contains_eager
 from sqlalchemy import URL, create_engine, text, insert, ForeignKey, select, update, func, cast, Enum
 from sqlalchemy import Table, Column, Integer, String, MetaData, Boolean, DateTime, BigInteger, ARRAY
+from sqlalchemy.pool import NullPool
 from datetime import datetime, timedelta, timezone
 import enum
 from dotenv import load_dotenv

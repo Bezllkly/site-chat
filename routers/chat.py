@@ -702,7 +702,7 @@ async def get_messages(chat: Post_chat, session: Optional[str] = Cookie(default=
                 .limit(1)
             )
             last_read_id = last_read_result.scalar_one_or_none()
-
+        await as_session.close()
     print({'ok': True, 'detail': {'mess': messages_data, 'last_read_id': last_read_id}})
     return {'ok': True, 'detail': {'mess': messages_data, 'last_read_id': last_read_id}}
 

@@ -219,7 +219,7 @@ class Dialog {
         mess_state.appendChild(h6);
         if (is_me) {
             const img = document.createElement("img");
-            img.src = "https://cdn-icons-png.flaticon.com/128/992/992700.png";
+            img.src = "https://cdn-icons-png.flaticon.com/128/18729/18729943.png";
             img.title = "sent";
             img.id = "img-" + mes_id;
             mess_state.appendChild(img);
@@ -243,7 +243,6 @@ class Dialog {
     }
 
     create_capture(mes_id, text=null, is_me, time, capture_link) {
-        console.log(capture_link);
         const capture = document.createElement("div");
         capture.classList.add("capture");
         capture.id = mes_id;
@@ -264,7 +263,7 @@ class Dialog {
         mess_state.appendChild(h6);
         if (is_me) {
             const img = document.createElement("img");
-            img.src = "https://cdn-icons-png.flaticon.com/128/992/992700.png";
+            img.src = "https://cdn-icons-png.flaticon.com/128/18729/18729943.png";
             img.title = "loading";
             img.id = 'img-' + mes_id;
             mess_state.appendChild(img);
@@ -281,6 +280,10 @@ class Dialog {
         }
         capture.appendChild(mess_state);
         dialog.appendChild(capture);
+        
+        if (!is_me && current_chat_type == 'private') {
+            observer.observe(capture);
+        }
     }
 
     create_file(mes_id, text=null, mess_type, file_name, file_size, file_type, is_me, time) {
@@ -359,6 +362,10 @@ class Dialog {
 
         file.appendChild(mes_state);
         dialog.appendChild(file);
+
+        if (!is_me && current_chat_type == 'private') {
+            observer.observe(file);
+        }
     }
     create_video(mes_id, text=null, video_path, is_me, time) {
         const video = document.createElement('div');
@@ -389,7 +396,7 @@ class Dialog {
         mess_state.appendChild(h6);
         if (is_me) {
             const img = document.createElement('img');
-            img.src = "https://cdn-icons-png.flaticon.com/128/13132/13132581.png";
+            img.src = "https://cdn-icons-png.flaticon.com/128/18729/18729943.png";
             img.id = 'img-'+mes_id;
             mess_state.appendChild(img);
             mess_state.style.justifyContent = 'end';
@@ -399,6 +406,10 @@ class Dialog {
         }
         dialog_video.appendChild(mess_state);
         dialog.appendChild(video);
+
+        if (!is_me && current_chat_type == 'private') {
+            observer.observe(video);
+        }
     }
     create_title(text, color='red') {
         const dialog_title = document.createElement('div');
@@ -1082,10 +1093,8 @@ async function auto_update() {
 }
 
 async function auto_update_dialog() {
-    console.log(11111111);
     try {
         if (is_dialog_opened) {
-            console.log(mess_id_from, mess_id_until);
             data = {'mess_id_from': mess_id_from, 'type': current_chat_type, 'chat_id': current_chat_id, 'mess_id_until': mess_id_until};
                 response = await fetch('/chat/api/get_mess', {
                     'method': 'POST',
@@ -1095,18 +1104,16 @@ async function auto_update_dialog() {
                     body: JSON.stringify(data)
                 });
                 json = await response.json();
-                console.log(json.ok, json.detail);
                 let dd = new Dialog();
-                console.log(json.detail.mess);
                 if (json.ok && is_opened_now) {
                     dd.clear_dialog()
                     is_opened_now = false;
                 }
+                
                 if (json.ok & json.detail.mess.length > 0) { 
                     mess_id_from = json.detail.mess[json.detail.mess.length-1].id;
                     for (let i = 0; i < json.detail.mess.length; i++) {
                         let message = json.detail.mess[i];
-                        console.log(message.created_at);
                         let date = new Date(message.created_at);
                         let hours = date.getHours();
                         let minutes = date.getMinutes();
@@ -1123,25 +1130,34 @@ async function auto_update_dialog() {
                             dd.create_video(message.id, message.text, message.link, message.created_by == me_info.user_id, time);
                         }
                     }
-                    for (let message_id of Object.keys(messages_history)) {
-                        if (message_id > prev_id_read) {
-                            let obj = document.getElementById(message_id);
-                            let mess_state = obj.querySelector('.mess-state');
-                            let img = mess_state.querySelector('img');
-                            img.src = 'https://cdn-icons-png.flaticon.com/128/5619/5619967.png';
-                            
-                            if (message_id == json.detail.last_read_id) {
-                                break;
+                    
+                }
+                if (json.ok) {
+                    console.log(json.detail.last_read_id);
+                    console.log(prev_id_read);
+                    console.log(json.detail.last_read_id && json.detail.last_read_id > prev_id_read);
+                    if (json.detail.last_read_id && json.detail.last_read_id > prev_id_read) {
+                        for (let message_id of Object.keys(messages_history)) {
+                            console.log(json.detail.last_read_id);
+                            if (message_id > prev_id_read && messages_history[message_id].created_by == me_info.user_id) {
+                                let obj = document.getElementById(message_id);
+                                let mess_state = obj.querySelector('.mess-state');
+                                let img = mess_state.querySelector('img');
+                                img.src = 'https://cdn-icons-png.flaticon.com/128/5619/5619967.png';
+                                
+                                if (message_id == json.detail.last_read_id) {
+                                    break;
+                                }
                             }
                         }
+                        prev_id_read = json.detail.last_read_id;
                     }
-                    prev_id_read = json.detail.last_read_id;
                 }
         }
     } catch (error) {
         console.log(error);
     } finally {
-        await new Promise(resolve => setTimeout(auto_update_dialog, 1000))
+        await new Promise(resolve => setTimeout(auto_update_dialog, 1500))
     }
 }
 

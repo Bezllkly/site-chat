@@ -290,7 +290,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: normal;
-    width: 60%;
+    width: auto;
     height: 50%;
     max-width: 600px;
     background-color: #cacaca;
