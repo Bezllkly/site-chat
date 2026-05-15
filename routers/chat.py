@@ -571,7 +571,6 @@ async def get_chat(chat: Post_infochat, session = Cookie(default=None)):
     
 @router.get('/api/get_chats') #get list of chats
 async def get_chats(session: Optional[str] = Cookie(default=None)):
-    await asyncio.sleep(5)
     if not session:
         return {'ok': False, 'detail': 'Session is empty'}
     
@@ -584,6 +583,16 @@ async def get_chats(session: Optional[str] = Cookie(default=None)):
     chats = []
     for chatmemb in query.user.chats:
         chats.append({'chat_id': chatmemb.chat.chat_id, 'username': chatmemb.chat.username, 'chat_type': chatmemb.chat.type, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content})
+
+    async with sql.as_session() as as_session:
+        private_chats = (await as_session.execute(select(sql.Private_Chat).where(or_(sql.Private_Chat.user1_id == query.user_id, sql.Private_Chat.user2_id == query.user_id).options(selectinload(sql.Private_Chat.user1), selectinload(sql.Private_Chat.user2))))).scalars().all()
+    print(len(private_chats))
+    for private_chat in private_chats:
+        if private_chat.user1_id == query.user_id:
+            interlocutor = private_chat.user2
+        else:
+            interlocutor = private_chat.user1
+        chats.append({'chat_id': private_chat.id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message': private_chat.last_message_content})
     return {'ok': True, 'detail': chats} 
 
 @router.post('/api/get_mess') #get chat's messages
@@ -926,23 +935,47 @@ async def post_update(update_data: Update, session = Cookie(default=None)):
         chats_db = (await as_session.execute(select(sql.Chat).filter(sql.Chat.members.any(sql.ChatMember.user_id == query.user.user_id)))).scalars().all()
 
     chats = {'chats': {'joined': [], 'leaved': [], 'modified': []}, 'private_chats': {'joined': [], 'leaved': [], 'modified': []}}
-    # chats
+    # --------chats--------
     db_chats_ids = [chatmemb.chat_id for chatmemb in query.user.chats if chatmemb.chat_id]
+    #joined
     for chat_id in db_chats_ids:
         if chat_id not in update_data.all_chats_ids:
             chat = [chatmemb for chatmemb in query.user.chats if chatmemb.chat_id == chat_id][0]
             print(chat.chat.type)
             chat_type = "group" if chat.chat.type == sql.Chat_type.group else 'channel'
             chats['chats']['joined'].append({'chat_id': chat.chat_id, 'chat_type': chat_type, 'avatar': chat.chat.avatar, 'title': chat.chat.title, 'last_message': chat.chat.last_message_content})
+    #leaved
     for chat_id in update_data.all_chats_ids:
         if chat_id not in db_chats_ids:
             chats['chats']['leaved'].append(chat_id)
+    #modified
     async with sql.as_session() as as_session:
         for chatmemb in query.user.chats:
-            messages = (await as_session.execute(select(sql.Message).filter(sql.Message.created_at > last_sync_at, sql.Message.chat_id == chatmemb.chat.chat_id))).scalars().all()
+            messages = (await as_session.execute(select(sql.Chat).where(sql.Message.created_at > last_sync_at, sql.Message.chat_id == chatmemb.chat.chat_id))).scalars().all()
             if not messages and chatmemb.joined_at < last_sync_at:
                 continue
             chats['chats']['modified'].append({'chat_id': chatmemb.chat.chat_id, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content, 'count_messages': len(messages)})
+
+    # --------private chats--------
+    async with sql.as_session() as as_session:
+        private_chats = (await as_session.execute(select(sql.Private_Chat).where(or_(sql.Private_Chat.user1_id == query.user_id, sql.Private_Chat.user2_id == query.user_id).options(selectinload(sql.Private_Chat.user1), selectinload(sql.Private_Chat.user2))))).scalars().all()
+    private_chats_ids = [private_chat.id for private_chat in private_chats]
+    #joined
+    for private_chat in private_chats:
+        if private_chat.id in update_data.all_private_chats_ids:
+            continue
+
+        if private_chat.user1_id == query.user_id:
+            interlocutor = private_chat.user2
+        else:
+            interlocutor = private_chat.user1
+        chats['private_chats']['joined'].append({'chat_id': private_chat.id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message': private_chat.last_message_content})
+    #leaved
+    for update_data_private_chat in update_data.all_private_chats_ids:
+        if update_data_private_chat.id not in private_chats_ids:
+            chats['private_chats']['leaved'].append(update_data_private_chat)
+    #modified
+
     
     print(chats)
     return {'ok': True, 'detail': chats}

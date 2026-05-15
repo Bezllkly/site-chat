@@ -478,6 +478,7 @@ class Chat {
         const img = document.createElement('img');
         if (avatar) {
             img.src = '/chat/api/avatar/'+avatar;
+            console.log(avatar);
         } else {
             img.src = 'https://cdn-icons-png.flaticon.com/128/12067/12067335.png';
         }
