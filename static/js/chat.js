@@ -1119,8 +1119,8 @@ async function auto_update_dialog() {
                         let minutes = date.getMinutes();
                         let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
 
+                        messages_history[message.id] = message;
                         if (message.mess_type == 'text') {
-                            messages_history[message.id] = message;
                             dd.create_message(message.id, message.text, message.created_by == me_info.user_id, time);
                         } else if (message.mess_type == 'file' || (message.file_width/message.file_height > 2 || message.file_height/message.file_width > 2)) {
                             dd.create_file(message.id, message.text, message.mess_type, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
@@ -1137,13 +1137,18 @@ async function auto_update_dialog() {
                     console.log(prev_id_read);
                     console.log(json.detail.last_read_id && json.detail.last_read_id > prev_id_read);
                     if (json.detail.last_read_id && json.detail.last_read_id > prev_id_read) {
+                        console.log(messages_history);
                         for (let message_id of Object.keys(messages_history)) {
                             console.log(json.detail.last_read_id);
+                            console.log(message_id > prev_id_read, messages_history[message_id].created_by == me_info.user_id);
                             if (message_id > prev_id_read && messages_history[message_id].created_by == me_info.user_id) {
                                 let obj = document.getElementById(message_id);
+                                console.log(1+obj);
                                 let mess_state = obj.querySelector('.mess-state');
+                                console.log(1+mess_state);
                                 let img = mess_state.querySelector('img');
-                                img.src = 'https://cdn-icons-png.flaticon.com/128/5619/5619967.png';
+                                console.log(3+img);
+                                img.src = 'https://cdn-icons-png.flaticon.com/128/3031/3031282.png';
                                 
                                 if (message_id == json.detail.last_read_id) {
                                     break;
