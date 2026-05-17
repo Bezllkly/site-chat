@@ -1023,11 +1023,8 @@ send.onclick = async function() {
 last_sync_at = new Date(1970);
 const chat = new Chat();
 chat.delete_all();
-async function auto_update() {
-    if (is_searching) {
-        setTimeout(auto_update, 5000);
-        return;
-    }
+
+async function get_chats_once() {
     try {
         let data = {last_sync_at: last_sync_at, all_chats_ids: all_chats_ids, all_private_chats_ids: all_private_chats_ids};
         try {
@@ -1090,7 +1087,7 @@ async function auto_update() {
             internet_state.textContent = 'Connecting...';
             console.log(error);
         }
-        
+
 
         try {
             response = await fetch('/chat/api/get_myself');
@@ -1110,9 +1107,35 @@ async function auto_update() {
 
     } catch (error) {
         console.log(error);
-    } finally {
-        await new Promise(resolve => setTimeout(auto_update, 5000))
     }
+}
+
+async function auto_update_chats() {
+    const wsHost = window.location.host;
+    console.log(`ws://${wsHost}/ws`);
+    const socket = new WebSocket(`ws://${wsHost}/chat/ws`)
+    socket.addEventListener('open', (event) => {
+        console.log('success');
+    })
+    socket.addEventListener('message', (event) => {
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            data = event.data;
+        }
+        if (data.type == 'ping') {
+            socket.send(JSON.stringify({'type': 'pong'}));
+        } else if (data.type == 'new_message') { // {"chat_id": int, "from_user_id": int, "from_user_name": str, "last_message": str, "mess_type": str}
+            all_chats[data.chat_type].last_message = data.last_message;
+            if (!is_searching) {
+                const chat = new Chat();
+                chat.update_chat(chat_id=data.message.chat_id, title=data.message.title, last_message=data.message.last_message, count_messages=1, avatar=data.message.avatar);
+            }
+        } else if (data.type == 'new_chat') {
+
+        } else if (data.type == 'del_chat') {}
+    })
 }
 
 async function auto_update_dialog() {
@@ -1190,7 +1213,8 @@ async function auto_update_dialog() {
 }
 
 async function main() {
-    auto_update();
+    get_chats_once();
+    auto_update_chats();
     auto_update_dialog();
 }
 
