@@ -1043,6 +1043,7 @@ async function auto_update() {
                 internet_state.textContent = 'NoShare';
                 /* last_sync_at = new Date().toISOString(); */
 
+                //-------chats-------
                 const chat = new Chat();
                 for (chat_json of json.detail.chats.joined) {
                     if (!(chat_json.chat_id in all_chats_ids)) {
@@ -1060,6 +1061,27 @@ async function auto_update() {
                 }
                 for (chat_json of json.detail.chats.modified) {
                     if (chat_json.chat_id in all_chats_ids) {
+                        chat.update_chat(chat_id=chat_json.chat_id, title=chat_json.title, last_message=chat_json.last_message, count_messages=chat_json.count_messages, avatar=chat_json.avatar);
+                    }
+                }
+
+                //-------private chats-------
+                for (chat_json of json.detail.private_chats.joined) {
+                    if (!(chat_json.chat_id in all_private_chats_ids)) {
+                        all_private_chats_ids.unshift(chat_json.chat_id);
+                        all_chats[chat_json.chat_id] = chat_json;
+                        chat.addstart_chat(type='private', chat_id=chat_json.chat_id, title=chat_json.title, username='@'+chat_json.username, avatar=chat_json.avatar);
+                    }
+                }
+                for (chat_id of json.detail.private_chats.leaved) {
+                    if (chat_id in all_private_chats_ids) {
+                        all_private_chats_ids = all_private_chats_ids.filter(item => item != chat_id);
+                        delete all_chats[chat_id];
+                        chat.delete_chat(chat_id);
+                    }
+                }
+                for (chat_json of json.detail.private_chats.modified) {
+                    if (chat_json.chat_id in all_private_chats_ids) {
                         chat.update_chat(chat_id=chat_json.chat_id, title=chat_json.title, last_message=chat_json.last_message, count_messages=chat_json.count_messages, avatar=chat_json.avatar);
                     }
                 }
@@ -1089,7 +1111,7 @@ async function auto_update() {
     } catch (error) {
         console.log(error);
     } finally {
-        await new Promise(resolve => setTimeout(auto_update, 2000))
+        await new Promise(resolve => setTimeout(auto_update, 5000))
     }
 }
 
@@ -1163,7 +1185,7 @@ async function auto_update_dialog() {
     } catch (error) {
         console.log(error);
     } finally {
-        await new Promise(resolve => setTimeout(auto_update_dialog, 1500))
+        await new Promise(resolve => setTimeout(auto_update_dialog, 2500))
     }
 }
 

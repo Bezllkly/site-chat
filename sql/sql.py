@@ -16,7 +16,11 @@ engine = create_async_engine(
     echo=False,
     connect_args={
         "server_settings": {"timezone": "UTC"}
-    }
+    },
+    pool_size=20,        # увеличиваем основные соединения
+    max_overflow=30,     # увеличиваем временные (при резких всплесках)
+    pool_timeout=60,     # даём запросам чуть больше времени
+    pool_pre_ping=True
 )
 
 as_session = async_sessionmaker(engine, expire_on_commit=False)
