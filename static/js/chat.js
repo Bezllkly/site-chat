@@ -113,9 +113,16 @@ class Dialog {
             }
         );
         let json = await response.json();
-        console.log(json.detail);
-        if (json.ok) {
-            console.log(json);
+        if (json && json.ok == false && json.detail == 'No result user') {
+            const dd = new Dialog();
+            dd.clear_dialog();
+            dd.create_title('The dialog is empty');
+            chat_join.style.display = 'none';
+            input.style.display = 'inline';
+            attach.style.display = 'inline';
+            send.style.display = 'inline';
+        } 
+        if (json && json.ok) {
             chat_name.textContent = json.detail.title;
             if (json.detail.avatar) {
                 el_avatar.src = "/chat/api/avatar/" + json.detail.avatar;
@@ -159,6 +166,83 @@ class Dialog {
                     send.style.display = 'none';
                 }
             }
+
+            // update chat's history
+            try {
+                data = {'mess_id_from': mess_id_from, 'type': current_chat_type, 'chat_id': current_chat_id, 'mess_id_until': mess_id_until};
+                response = await fetch('/chat/api/get_mess', {
+                    'method': 'POST',
+                    'headers': {
+                        'Content-type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                json = await response.json();
+                console.log(json.ok+json.detail);
+                let dd = new Dialog();
+                if (json.ok && is_opened_now) {
+                    dd.clear_dialog();
+                    is_opened_now = false;
+                }
+                
+                if (json.ok & json.detail.mess.length > 0) { 
+                    mess_id_from = json.detail.mess[json.detail.mess.length-1].id;
+                    for (let i = 0; i < json.detail.mess.length; i++) {
+                        let message = json.detail.mess[i];
+                        let date = new Date(message.created_at);
+                        let hours = date.getHours();
+                        let minutes = date.getMinutes();
+                        let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
+
+                        messages_history[message.id] = message;
+                        if (message.mess_type == 'text') {
+                            dd.create_message(message.id, message.text, message.created_by == me_info.user_id, time);
+                        } else if (message.mess_type == 'file' || (message.file_width/message.file_height > 2 || message.file_height/message.file_width > 2)) {
+                            dd.create_file(message.id, message.text, message.mess_type, message.file_name, message.file_size, message.file_type, message.created_by == me_info.user_id, time);
+                        } else if (message.mess_type == 'capture') {
+                            dd.create_capture(message.id, message.text, message.created_by == me_info.user_id, time, message.link);
+                        } else if (message.mess_type == 'video') {
+                            dd.create_video(message.id, message.text, message.link, message.created_by == me_info.user_id, time);
+                        }
+                    }
+                    
+                }
+                if (json.ok) {
+                    console.log(json.detail.last_read_id);
+                    console.log(prev_id_read);
+                    console.log(json.detail.last_read_id && json.detail.last_read_id > prev_id_read);
+                    if (json.detail.last_read_id && json.detail.last_read_id > prev_id_read) {
+                        console.log(messages_history);
+                        for (let message_id of Object.keys(messages_history)) {
+                            console.log(json.detail.last_read_id);
+                            console.log(message_id > prev_id_read, messages_history[message_id].created_by == me_info.user_id);
+                            if (message_id > prev_id_read && messages_history[message_id].created_by == me_info.user_id) {
+                                let obj = document.getElementById(message_id);
+                                console.log(1+obj);
+                                let mess_state = obj.querySelector('.mess-state');
+                                console.log(1+mess_state);
+                                let img = mess_state.querySelector('img');
+                                console.log(3+img);
+                                img.src = 'https://cdn-icons-png.flaticon.com/128/3031/3031282.png';
+                                
+                                if (message_id == json.detail.last_read_id) {
+                                    break;
+                                }
+                            }
+                        }
+                        prev_id_read = json.detail.last_read_id;
+                    }
+                } else {
+                    dd.clear_dialog();
+                    dd.create_title("Server error");
+                }
+            } catch (e) {
+                console.log('except '+e);
+                dd.clear_dialog();
+                dd.create_title('No internet?');
+            }
+
+            // binding buttons
             chat_join.onclick = async () => {
                 console.log(chat_id);
                 let data = {chat_id: chat_id}
@@ -1118,6 +1202,7 @@ async function auto_update_chats() {
         console.log('success');
     })
     socket.addEventListener('message', (event) => {
+        console.log('works!!!!!!!!kdlskd');
         let data;
         try {
             data = JSON.parse(event.data);
@@ -1127,14 +1212,45 @@ async function auto_update_chats() {
         if (data.type == 'ping') {
             socket.send(JSON.stringify({'type': 'pong'}));
         } else if (data.type == 'new_message') { // {"chat_id": int, "from_user_id": int, "from_user_name": str, "last_message": str, "mess_type": str}
-            all_chats[data.chat_type].last_message = data.last_message;
+            console.log('new messageijdklsj');
+            console.log(messages_history);
+            if (data.message.mess_id in Object.keys(all_chats)) {
+                console.log(1);
+                all_chats[data.message.mess_id].last_message = data.message.last_message;
+            } else {
+                console.log(2);
+                all_chats[data.message.mess_id] = {'chat_id': data.message.chat_id, 'chat_type': data.message.chat_type, 'last_message': data.message.last_message, 'title': data.message.title, 'username': data.message.username, 'avatar': data.message.avatar};
+            }
             if (!is_searching) {
                 const chat = new Chat();
                 chat.update_chat(chat_id=data.message.chat_id, title=data.message.title, last_message=data.message.last_message, count_messages=1, avatar=data.message.avatar);
             }
+            if (current_chat_id && (data.message.chat_type == 'private' && current_chat_id == data.message.chat_id) || (current_chat_id == data.message.chat_id)) {
+                const dialog = new Dialog();
+
+                let date = new Date(data.message.created_at);
+                let hours = date.getHours();
+                let minutes = date.getMinutes();
+                let time = hours.toString().padStart(2, '0')+":"+minutes.toString().padStart(2, '0');
+
+                messages_history[data.message.mess_id] = data.message;
+                if (data.message.mess_type == 'text') {
+                    dialog.create_message(data.message.chat_id, data.message.last_message, data.message.created_by == me_info.user_id, time);
+                } else if (data.message.mess_type == 'file' || (data.message.file_width/data.message.file_height > 2 || data.message.file_height/data.message.file_width > 2)) {
+                    dialog.create_file(data.message.chat_id, data.message.last_message, data.message.mess_type, data.message.file_name, data.message.file_size, data.message.file_type, data.message.created_by == me_info.user_id, time);
+                } else if (data.message.mess_type == 'capture') {
+                    dialog.create_capture(data.message.chat_id, data.message.last_message, data.message.created_by == me_info.user_id, time, data.message.link);
+                } else if (data.message.mess_type == 'video') {
+                    dialog.create_video(data.message.chat_id, data.message.last_message, data.message.attach_link, data.message.created_by == me_info.user_id, time);
+                }
+            }
         } else if (data.type == 'new_chat') {
 
-        } else if (data.type == 'del_chat') {}
+        } else if (data.type == 'update_chat') {
+
+        } else if (data.type == 'del_chat') {
+
+        } else if (data.type == 'read_mess') {}
     })
 }
 
@@ -1215,7 +1331,6 @@ async function auto_update_dialog() {
 async function main() {
     get_chats_once();
     auto_update_chats();
-    auto_update_dialog();
 }
 
 main();
