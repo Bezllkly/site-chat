@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <button id="create_ws" title="ws">Создать вебсокет</button>
+    <button id="send_ping" title="helo">Отправить пинг</button>
+    <div>Логи</div>
+    <div id="log"></div>
+
+    <script>
+        let main_websocket;
+        const wsHost = window.location.host;
+        const create_ws = document.getElementById('create_ws');
+        const send_ping = document.getElementById('send_ping');
+        const log = document.getElementById('log');
+
+        create_ws.onclick = () => {
+            main_websocket = new WebSocket(`ws://${wsHost}/chat/ws`);
+
+            main_websocket.addEventListener('open', (event) => {
+                console.log('opened');
+            })
+
+            main_websocket.addEventListener('close', (event) => {
+                console.log(event);
+            })
+        }
+        send_ping.onclick = () => {
+            main_websocket.send(JSON.stringify({'type': 'ping'}));
+        }
+    </script>
+</body>
+</html>

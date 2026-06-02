@@ -35,13 +35,18 @@ async def favicon():
 
 @app.get('/ex')
 async def ex():
-    return FileResponse(os.path.join('ex.html'))
+    return FileResponse(os.path.join('static', 'example.html'))
 
 @app.get('/t')
 async def teapot():
     return Response(status_code=418)
 
-# Запуск приложения
-if __name__ == "__main__":
+async def main():
+    asyncio.create_task(chat.manager.queue_processor()) # websocket connections manager
+
     uvicorn.run("main:app", host="0.0.0.0", port=1234
                 , reload=True)
+
+# Запуск приложения
+if __name__ == "__main__":
+    asyncio.run(main())

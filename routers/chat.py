@@ -67,6 +67,11 @@ class ConnectionManager:
     def __init__(self):
         # Key: user_id, value: list of WebSocket-connections of user
         self.active_connections: dict[int, list[WebSocket]] = {}
+        self.message_queue = asyncio.Queue()
+
+    async def queue_processor(self):
+        while True:
+            user_id, websocket, data = await self.message_queue.get()
     
     async def connect(self, websocket: WebSocket, user_id: int):
         await websocket.accept()
@@ -77,15 +82,17 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket, user_id: int):
         print("disconnect", user_id)
         if user_id in self.active_connections:
-            self.active_connections[user_id].remove(websocket)
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+                
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
     
     async def send_to_user(self, user_id: int, message: dict):
-        print('works')
         if user_id in self.active_connections:
             print(user_id)
             for ws in self.active_connections[user_id]:
+                print('send to', user_id)
                 await ws.send_json(message)
     
     async def send_to_users(self, users_id: list, message: dict):
@@ -145,11 +152,57 @@ async def chat(response: Response, session: Optional[str] = Cookie(default=None)
     path = os.path.join("static", "chat.html")
     return FileResponse(path)
 
+async def websocket_manager(websocket: WebSocket, user_id: int):
+    waiting_for_pong = False
+
+    async def websocket_heartbeat():
+        nonlocal waiting_for_pong
+        while True:
+            try:
+                pass
+                # await websocket.send_json({'type': 'ping'})
+            except:
+                return
+            waiting_for_pong = False #True
+            start = asyncio.get_event_loop().time()
+
+            while waiting_for_pong:
+                if asyncio.get_event_loop().time() - start > 5 :  # 5 seconds timeout
+                    print('pong not recieved')
+                    await websocket.close(code=1000, reason='Heartbeat timeout')
+                    manager.disconnect(websocket, user_id)
+                    return
+                await asyncio.sleep(1)
+            await asyncio.sleep(5)  # Send ping every 5 seconds
+                
+    async def websocket_receiver():
+        nonlocal waiting_for_pong
+        while True:
+            try:
+                data = await websocket.receive_json()
+                if data.get('type') == 'pong':
+                    waiting_for_pong = False
+                elif data.get('type') == 'ping':
+                    await websocket.send_json({'type': 'pong'})
+                else:
+                    await manager.message_queue.put((user_id, websocket, data))
+            except WebSocketDisconnect:
+                manager.disconnect(websocket, user_id)
+                return
+            except Exception as e:
+                return
+    
+    heartbeat_task = asyncio.create_task(websocket_heartbeat())
+    receiver_task = asyncio.create_task(websocket_receiver())
+
+    await receiver_task
+    heartbeat_task.cancel()
+        
+
 manager = ConnectionManager()
 
 @router.websocket("/ws")
 async def webcon(websocket: WebSocket, session: str = Cookie(default=None)):
-    print(session)
     async with sql.as_session() as as_session:
         session_db = (await as_session.execute(select(sql.Session).filter_by(token=session).options(selectinload(sql.Session.user).selectinload(sql.User.sessions)))).scalar_one_or_none()
     if not session_db:
@@ -160,11 +213,7 @@ async def webcon(websocket: WebSocket, session: str = Cookie(default=None)):
         return
     
     await manager.connect(websocket, session_db.user_id)
-    try:
-        while True:
-            data = await websocket.receive_json()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, session_db.user_id)
+    await asyncio.create_task(websocket_manager(websocket, session_db.user_id))
 
     
 
@@ -287,23 +336,14 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                 await as_session.flush()
 
                 if private_chat.user1_id == session_db.user_id:
-                    print('yes')
                     interlocutor = user_db
                 else:
                     interlocutor = session_db.user
             else:
                 if private_chat.user1_id == session_db.user_id:
-                    print('yes')
                     interlocutor = private_chat.user2
                 else:
                     interlocutor = private_chat.user1
-
-            users_in_chat = [private_chat.user1_id, private_chat.user2_id]
-
-            print(private_chat.user1_id, private_chat.user2_id)
-            print('1 is', session_db.user_id)
-            print('2 is', private_chat.user1_id)
-            
 
             new_objs = []
             if files and len(files) > 1:
@@ -338,12 +378,18 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                     as_session.add(new_file)
                     await as_session.flush()
                     new_mess = sql.Message(created_by_id=session_db.user_id, private_chat_id=int(private_chat.id), attachment_id=new_file.id, type=mess_type)
-                    await manager.send_to_users(users_in_chat, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'created_at': datetime.now(timezone.utc).isoformat(), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': interlocutor.name, 'username': interlocutor.username}})
-                    new_objs.append(new_mess)
+                    as_session.add(new_mess)
+                    await as_session.flush()
+
+                    await manager.send_to_user(session_db.user_id, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': '', 'mess_type': mess_type.value, 'created_at': datetime.now(timezone.utc).isoformat(), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': interlocutor.name, 'username': interlocutor.username, 'mess_id': new_mess.id}})
+                    await manager.send_to_user(interlocutor.user_id, {'type': 'new_message', 'message': {'chat_id': session_db.user.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': '', 'mess_type': mess_type.value, 'created_at': datetime.now(timezone.utc).isoformat(), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': session_db.user.name, 'username': session_db.user.username, 'mess_id': new_mess.id}})
                 if text:
-                    new_message = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), type=sql.Message_type.text)
-                    await manager.send_to_users(users_in_chat, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'created_at': datetime.now(timezone.utc).isoformat(), 'title': interlocutor.name, 'username': interlocutor.username}})
-                    new_objs.append(new_message)
+                    new_mess = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), type=sql.Message_type.text)
+                    as_session.add(new_mess)
+                    await as_session.flush()
+
+                    await manager.send_to_user(session_db.user_id, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'created_at': datetime.now(timezone.utc).isoformat(), 'title': interlocutor.name, 'username': interlocutor.username, 'mess_id': new_mess.id}})
+                    await manager.send_to_user(interlocutor.user_id, {'type': 'new_message', 'message': {'chat_id': session_db.user.user_id, 'created_by': new_mess.created_by_id, 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'created_at': datetime.now(timezone.utc).isoformat(), 'title': session_db.user.name, 'username': session_db.user.username, 'mess_id': new_mess.id}})
 
             elif files: #one file
                 file = files[0]
@@ -377,15 +423,22 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                 as_session.add(new_file)
                 await as_session.flush()
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), attachment_id=new_file.id, type=mess_type)
-                await manager.send_to_users(users_in_chat, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': interlocutor.name, 'username': interlocutor.username}})
-                new_objs.append(new_mess)
+                as_session.add(new_mess)
+                await as_session.flush()
+
+                await manager.send_to_user(session_db.user_id, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': interlocutor.name, 'username': interlocutor.username, 'mess_id': new_mess.id}})
+                await manager.send_to_user(interlocutor.user_id, {'type': 'new_message', 'message': {'chat_id': session_db.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': session_db.user.name, 'username': session_db.user.username, 'mess_id': new_mess.id}})
             else:
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, private_chat_id=int(private_chat.id), type=sql.Message_type.text)
                 as_session.add(new_mess)
                 await as_session.flush()
-                await manager.send_to_users(users_in_chat, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': interlocutor.name, 'username': interlocutor.username, 'mess_id': new_mess.id}})
-                new_objs.append(new_mess)
-                print(datetime.now(timezone.utc))
+                await manager.send_to_user(session_db.user_id, {'type': 'new_message', 'message': {'chat_id': interlocutor.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': interlocutor.name, 'username': interlocutor.username, 'mess_id': new_mess.id}})
+                await manager.send_to_user(interlocutor.user_id, {'type': 'new_message', 'message': {'chat_id': session_db.user_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'private', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': session_db.user.name, 'username': session_db.user.username, 'mess_id': new_mess.id}})
+            
+            private_chat.last_message_id = new_mess.id
+            private_chat.last_message_content = text if text else '[File]' 
+            private_chat.last_message_author_id = session_db.user_id
+            private_chat.last_message_author_name = session_db.user.name
             
             as_session.add_all(new_objs)
             await as_session.commit()
@@ -403,7 +456,7 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
             if not chat_db:
                 return {'ok': False, 'detail': 'didnt join'}
                 
-            chatmembs_in_chat = chat_db.members
+            chatmembs_in_chat = [chatmember.user_id for chatmember in chat_db.members]
         
             new_objs = []
             if files and len(files) > 1:
@@ -441,12 +494,12 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                     as_session.add(new_file)
                     await as_session.flush()
                     new_mess = sql.Message(created_by_id=session_db.user_id, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
-                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username}})
+                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                     new_objs.append(new_mess)
                 if text:
-                    new_message = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
-                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username}})
-                    new_objs.append(new_message)
+                    new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
+                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
+                    new_objs.append(new_mess)
             elif files:
                 file = files[0]
                 if file.size > 1073741824:
@@ -481,12 +534,17 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                 as_session.add(new_file)
                 await as_session.flush()
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
-                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username}})
+                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                 new_objs.append(new_mess)
             else:
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
-                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username}})
+                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'group', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                 new_objs.append(new_mess)
+
+            chat_db.last_message_id = new_mess.id
+            chat_db.last_message_content = text if text else '[File]' 
+            chat_db.last_message_author_id = session_db.user_id
+            chat_db.last_message_author_name = session_db.user.name
 
             as_session.add_all(new_objs)
             await as_session.commit()
@@ -507,7 +565,7 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
             if not chat_db:
                 return {'ok': False, 'detail': 'didnt join'}
                 
-            chatmembs_in_chat = chat_db.members
+            chatmembs_in_chat = [chatmemb.user_id for chatmemb in chat_db.members]
 
             new_objs = []
             if files and len(files) > 1:
@@ -545,12 +603,12 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                     as_session.add(new_file)
                     await as_session.flush()
                     new_mess = sql.Message(created_by_id=session_db.user_id, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
-                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username}})
+                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                     new_objs.append(new_mess)
                 if text:
-                    new_message = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
-                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username}})
-                    new_objs.append(new_message)
+                    new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
+                    await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
+                    new_objs.append(new_mess)
             elif files:
                 file = files[0]
                 if file.size > 1073741824:
@@ -585,12 +643,17 @@ async def send_mess(text = Form(default=None), files: Optional[List[UploadFile]]
                 as_session.add(new_file)
                 await as_session.flush()
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), attachment_id=new_file.id, type=mess_type)
-                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': str(mess_type), 'attach_link': f'/chat/api/attach/{new_file.private_chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username}})
+                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': new_mess.created_by_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': mess_type.value, 'attach_link': f'/chat/api/attach/{new_file.chat_id}/{new_file.file_name}', 'file_name': new_file.file_origname, 'file_size': new_file.file_size, 'file_type': new_file.file_type, 'file_height': new_file.height, 'file_width':new_file.width, 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                 new_objs.append(new_mess)
             else:
                 new_mess = sql.Message(created_by_id=session_db.user_id, text=text, chat_id=int(chat_id), type=sql.Message_type.text)
-                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.id, 'created_by': session_db.user_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username}})
+                await manager.send_to_users(chatmembs_in_chat, {'type': 'new_message', 'message': {'chat_id': chat_db.chat_id, 'created_by': session_db.user_id, 'created_at': datetime.now(timezone.utc).isoformat(), 'chat_type': 'channel', 'from_user_id': session_db.user_id, 'from_user_name': session_db.user.name, 'last_message': text if text else '', 'mess_type': 'text', 'title': chat_db.title, 'username': chat_db.username, 'mess_id': new_mess.id}})
                 new_objs.append(new_mess)
+
+            chat_db.last_message_id = new_mess.id
+            chat_db.last_message_content = text if text else '[File]' 
+            chat_db.last_message_author_id = session_db.user_id
+            chat_db.last_message_author_name = session_db.user.name
 
             as_session.add_all(new_objs)
             await as_session.commit()
@@ -617,6 +680,7 @@ async def join_chat(chat: Post_join, session= Cookie(default=None)):
         new_chatmemb = sql.ChatMember(user_id=user.user_id, chat_id=chat_db.chat_id)
         as_session.add(new_chatmemb)
         await as_session.commit()
+        await manager.send_to_user(session_db.user_id, {'type': 'new_chat', 'chat': {'chat_id': chat_db.chat_id, 'username': chat_db.username, 'chat_type': chat_db.type.value, 'avatar': chat_db.avatar, 'title': chat_db.title, 'last_message': chat_db.last_message_content, 'last_update_at': datetime.now(timezone.utc).isoformat()}})
     
     return {'ok': True, 'detail': 'Success'}
             
@@ -678,7 +742,7 @@ async def get_chats(session: Optional[str] = Cookie(default=None)):
 
         chats = []
         for chatmemb in query.user.chats:
-            chats.append({'chat_id': chatmemb.chat.chat_id, 'username': chatmemb.chat.username, 'chat_type': chatmemb.chat.type, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content})
+            chats.append({'chat_id': chatmemb.chat.chat_id, 'username': chatmemb.chat.username, 'chat_type': chatmemb.chat.type, 'avatar': chatmemb.chat.avatar, 'title': chatmemb.chat.title, 'last_message': chatmemb.chat.last_message_content, 'last_message_author_id': chatmemb.chat.last_message_author_id, 'last_message_author_name': chatmemb.chat.last_message_author_name})
 
         private_chats = (await as_session.execute(select(sql.Private_Chat).where(or_(sql.Private_Chat.user1_id == query.user_id, sql.Private_Chat.user2_id == query.user_id).options(selectinload(sql.Private_Chat.user1), selectinload(sql.Private_Chat.user2))))).scalars().all()
         for private_chat in private_chats:
@@ -686,7 +750,7 @@ async def get_chats(session: Optional[str] = Cookie(default=None)):
                 interlocutor = private_chat.user2
             else:
                 interlocutor = private_chat.user1
-            chats.append({'chat_id': private_chat.id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message': private_chat.last_message_content})
+            chats.append({'chat_id': private_chat.id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message': private_chat.last_message_content, 'last_message_author_id': private_chat.last_message_author_id, 'last_message_author_name': private_chat.last_message_author_name})
         return {'ok': True, 'detail': chats} 
 
 @router.post('/api/get_mess') #get chat's messages
@@ -731,7 +795,8 @@ async def get_messages(chat: Post_chat, session: Optional[str] = Cookie(default=
                     'updated_at': message.updated_at,
                     'reply_to_id': message.reply_to_id,
                     'text': message.text,
-                    'mess_type': message.type
+                    'mess_type': message.type,
+                    'is_read': message.is_read
                 }
 
                 if message.type != 'text' and message.attachment:
@@ -933,7 +998,7 @@ async def create_chat(session = Cookie(default=None), image: Optional[UploadFile
                 shutil.copyfileobj(image.file, buffer)
         
         new_chat = sql.Chat(chat_id=chat_id, username=chat_username, title=chat_name, type=sql.Chat_type.group if chat_type == 'group' else sql.Chat_type.channel, description=chat_desc, created_by=query.user_id, avatar=file_name_db if image else None)
-        manager.send_to_user(query.user_id, {})
+        await manager.send_to_user(query.user_id, {'type': 'new_chat', 'chat': {'chat_id': chat_id, 'username': chat_username, 'chat_type': chat_type, 'avatar': file_name_db if image else None, 'title': chat_name, 'last_message': '', 'last_update_at': datetime.now(timezone.utc).isoformat()}})
         new_chatmember = sql.ChatMember(user_id=query.user_id, chat_id=chat_id, role=sql.Chat_roles.owner)
         new_username = sql.Username(username=chat_username, owner_type=sql.Chat_type.group if chat_type == 'group' else sql.Chat_type.channel, owner_id=chat_id)
         if image:
@@ -968,6 +1033,11 @@ async def search(search: Post_search, session = Cookie(default=None)):
         if not session_db or session_db.expires_at < datetime.now(timezone.utc):
             return {'ok': False, 'detail': 'Session is expired'}
         
+        users_db = []
+        chats_db = []
+        users = []
+        chats = []
+
         if search.type_content:
             if search.type_content == 'private':
                 users_db = (await as_session.execute(select(sql.User).filter(or_(sql.User.username.ilike(f'%{search.content}%'),
@@ -980,14 +1050,13 @@ async def search(search: Post_search, session = Cookie(default=None)):
                                                                         sql.User.name.ilike(f'%{search.content}%'))).limit(5))).scalars().all()
             chats_db = (await as_session.execute(select(sql.Chat).filter(or_(sql.Chat.title.ilike(f'%{search.content}%'),
                                                                             sql.Chat.username.ilike(f'%{search.content}%'))).limit(5))).scalars().all()
-            users = []
-            chats = []
-            for user in users_db:
-                if user.user_id == session_db.user_id:
-                    continue
-                users.append({'user_id': user.user_id, 'username': user.username, 'name': user.name, 'avatar': user.avatar})
-            for chat in chats_db:
-                chats.append({'type': chat.type, 'chat_id': chat.chat_id, 'username': chat.username, 'title': chat.title, 'avatar': chat.avatar})
+            
+        for user in users_db:
+            if user.user_id == session_db.user_id:
+                continue
+            users.append({'user_id': user.user_id, 'username': user.username, 'name': user.name, 'avatar': user.avatar})
+        for chat in chats_db:
+            chats.append({'type': chat.type, 'chat_id': chat.chat_id, 'username': chat.username, 'title': chat.title, 'avatar': chat.avatar})
         return {'ok': True, 'detail': {'users': users, 'chats': chats}}
         
 @router.get('/api/get_myself')
@@ -1032,7 +1101,7 @@ async def post_update(update_data: Update, session = Cookie(default=None)):
             if chat_id not in update_data.all_chats_ids:
                 chat = [chatmemb for chatmemb in query.user.chats if chatmemb.chat_id == chat_id][0]
                 chat_type = "group" if chat.chat.type == sql.Chat_type.group else 'channel'
-                chats['chats']['joined'].append({'chat_id': chat.chat_id, 'username': chat.chat.username, 'chat_type': chat_type, 'avatar': chat.chat.avatar, 'title': chat.chat.title, 'last_message': chat.chat.last_message_content})
+                chats['chats']['joined'].append({'chat_id': chat.chat_id, 'username': chat.chat.username, 'chat_type': chat_type, 'avatar': chat.chat.avatar, 'title': chat.chat.title, 'last_message_id': chat.chat.last_message_id, 'last_message': chat.chat.last_message_content, 'last_message_author_id': chat.chat.last_message_author_id, 'last_message_author_name': chat.chat.last_message_author_name})
         #leaved
         for chat_id in update_data.all_chats_ids:
             if chat_id not in db_chats_ids:
@@ -1065,7 +1134,7 @@ async def post_update(update_data: Update, session = Cookie(default=None)):
                 interlocutor = private_chat.user2
             else:
                 interlocutor = private_chat.user1
-            chats['private_chats']['joined'].append({'chat_id': interlocutor.user_id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message': private_chat.last_message_content})
+            chats['private_chats']['joined'].append({'chat_id': interlocutor.user_id, 'username': interlocutor.username, 'chat_type': 'private', 'avatar': interlocutor.avatar, 'title': interlocutor.name, 'last_message_id': private_chat.last_message_id, 'last_message': private_chat.last_message_content, 'last_message_author_id': private_chat.last_message_author_id, 'last_message_author_name': private_chat.last_message_author_name})
         #leaved
         for update_data_private_chat in update_data.all_private_chats_ids:
             if update_data_private_chat not in private_chats_ids:
@@ -1117,6 +1186,7 @@ async def read_mess(chat: Post_readmess, session = Cookie(default=None)):
         stmt = update(sql.Message).where(and_(sql.Message.private_chat_id == message.private_chat_id, sql.Message.id <= message.id)).values(is_read=True)
         await as_session.execute(stmt)
         await as_session.commit()
+        await manager.send_to_user(message.created_by_id, {'type': 'read_mess', 'chat_id': private_chat.id, 'interlocutor_id': session_db.user_id, 'mess_id': chat.mess_id})
         return {'ok': True, 'detail': 'Success'}
 
 @router.get('/del')
@@ -1128,3 +1198,4 @@ async def delete_cookie(response: Response, session: Optional[str] = Cookie(defa
         expires=datetime.now(timezone.utc) - timedelta(days=1)  # yesterday
     )
     return {'ok': True, 'message': 'Logged out'}
+

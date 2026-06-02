@@ -157,7 +157,8 @@ body {
     flex-direction: column;
     width: 100%;
     min-width: 100px;
-    height: 100%;
+    height: calc(100dvh - 50px);
+    max-height: 100dvh;
     background-image: url(https://img.freepik.com/premim-photo/abstract-colorful-bent-paper-background-design_851755-6183.jpg?semt=ais_hybrid&w=740&q=80);
     background-size: cover;
     flex: 1;
@@ -259,6 +260,9 @@ body {
 .img-type {
     height: 20px;
     aspect-ratio: 1/1;
+}
+.chat-descdiv {
+    display: flex;
 }
 
 #create-chat {
@@ -432,7 +436,7 @@ body {
     border: none;
     border-top: 2px solid black;
     padding: 5px;
-    z-index: 1000; 
+    z-index: 800; 
 }
 .chat-bar div {
     display: flex;
@@ -659,7 +663,7 @@ body {
     margin-right: 5px;
 }
 .dialog .capture {
-    width: max-content;
+    width: 80%;
     max-width: 500px;
     background-color: #cacaca;
     border: none;
@@ -671,7 +675,7 @@ body {
 .dialog-img {
     display: block;
     width: auto;
-    max-width: 400px;
+    max-width: 100%;
     height: auto;
     justify-self: center;
     border: none;
@@ -708,12 +712,21 @@ body {
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;   
+    -ms-user-select: none; 
+    cursor: pointer;
 }
 .dialog-file img {
     width: 30px;
     height: 30px;
 }
 .dialog-file-info {
+    user-select: none;
+    -webkit-user-select: none; 
+    -moz-user-select: none;    
+    -ms-user-select: none; 
     display: flex;
     flex-direction: column;
     text-overflow: ellipsis;

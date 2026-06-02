@@ -89,6 +89,19 @@ join.onclick = async function() {
     }
 }
 
+username.addEventListener('keypress', () => {
+    if (event.key == 'Enter') {
+        event.preventDefault();
+        password.focus();
+    }
+})
+password.addEventListener('keypress', () => {
+    if (event.key == 'Enter') {
+        event.preventDefault();
+        join.click();
+    }
+})
+
 const container = document.getElementById('container');
 
 container.style.width = container.style.width;

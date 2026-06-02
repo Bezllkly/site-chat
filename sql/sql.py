@@ -127,7 +127,9 @@ class Chat(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)  )
     avatar = Column(String(100), nullable=True)
     last_message_id = Column(Integer, nullable=True)
-    last_message_content = Column(String(10), nullable=True)
+    last_message_content = Column(String, nullable=True)
+    last_message_author_id = Column(Integer, nullable=True)
+    last_message_author_name = Column(String(20), nullable=True)
 
     creator = relationship('User', back_populates='chatsadmin', foreign_keys=[created_by])
     members = relationship('ChatMember', back_populates='chat')
@@ -140,7 +142,9 @@ class Private_Chat(Base):
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     last_message_id = Column(Integer, nullable=True)
-    last_message_content = Column(String(10), nullable=True)
+    last_message_content = Column(String, nullable=True)
+    last_message_author_id = Column(Integer, nullable=True)
+    last_message_author_name = Column(String(20), nullable=True)
     user1_id = Column(Integer, ForeignKey('users.user_id'))
     user2_id = Column(Integer, ForeignKey('users.user_id'))
 
