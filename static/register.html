@@ -3,18 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/register.css">
+    <link rel="stylesheet" href="/static/css/register.css">
     <title>Chat</title>
 </head>
 <body>
-    <div class="container">
-        <h1>Зарегистрируйся</h1>
-        <h2>Имя</h2>
-        <input type="text" id="username" placeholder="Name">
-        <h2>Пароль</h2>
-        <input type="password" id="password" placeholder="Password">
-        <button>Войти</button>
+    <div id="title" class="title">
+        <img src="/static/img/favicon.ico" title="title">
+        <span>NoShare</span>
     </div>
-    <script src="js/register.js"></script>
+    <div class="back">
+        <button id="but-back">
+            <span id="text-back">Go to Menu</span>
+            <img src="https://cdn-icons-png.flaticon.com/128/1828/1828479.png" title="back">
+        </button>
+    </div>
+    <div class="container", id="container">
+        <h1>Who are you?</h1>
+        <h2>Username</h2>
+        <div>
+            <span>@</span>
+            <input type="text" id="username" placeholder="Username">
+        </div>
+        <h2>Password</h2>
+        <input type="password" id="password" placeholder="Password">
+        <button id="join">Join</button>
+        <span id="error-login"></span>
+    </div>
+    <div class="joke">
+        <button id="joke-but">
+            <img src="https://cdn-icons-png.flaticon.com/128/10541/10541890.png" title="joke">
+            <span>WHO AM I?</span>
+        </button>
+    </div>
+    <div class="loading" id="loading">
+        <div>
+            <img src="https://media.tenor.com/WX_LDjYUrMsAAAAi/loading.gif" title="loading">
+            <span>loading</span>
+        </div>
+    </div>
+    <script src="/static/js/register.js"></script>
 </body>
 </html>

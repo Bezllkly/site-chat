@@ -3,174 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
     <title>Chats</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
+    <div id="create-chat-background">
+        <div id="create-chat-window">
+            <div id="chat-title">
+                <h2>New chat</h2>
+                <img id="create-chat-window-close" src="https://cdn-icons-png.flaticon.com/128/2976/2976286.png" title="close">
+            </div>
+            <div id="create-chat-name">
+                <img id="chat-img" src="https://cdn-icons-png.flaticon.com/128/3524/3524388.png" title="create_chat">
+                <input type="file" id="photoinput" accept="image/*" aria-label="dk">
+                <input class="delete-chstatus" type="text" aria-label="h" placeholder="Chat name" id="chatname-input">
+            </div>
+            <div id="chat-type">
+                <div>
+                    <h3>What is this?</h3>
+                    <select class="delete-chstatus" id="chattype-select" name="chattype-select" title="chattype-select">
+                        <option value="group">Group</option>
+                        <option value="channel">Channel</option>
+                    </select>
+                </div>
+                <div>
+                    <h3>Chat's username</h3>
+                    @<input class="delete-chstatus" type="text" id="chatusername-input" placeholder="Chat's username">
+                </div>
+            </div>
+            <div id="chat-desc">
+                <h3>Chat's description</h3>
+                <textarea class="delete-chstatus" id="chatdesc-input" rows="4" cols="50" placeholder="Something about your chat"></textarea>
+            </div>
+            <div id="chat-submit">
+                <span id="create-chat-status"></span>
+                <button id="chatcreate">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="origin">
     <header class="title">
         <div>
             <a href="/" id="title">
-                <img class="image-icon" src="img/favicon.ico" title="menu">
-                <span class="text">Mini-chat</span>
+                <img class="image-icon" src="/static/img/favicon.ico" title="menu">
+                <span id="internet-state" class="text">NoShare</span>
             </a>
         </div>
+        <div id="search-div">
+            <input type="text" id="search-input" placeholder="search">
+            <img id="search-img" src="https://cdn-icons-png.flaticon.com/128/151/151773.png" title="search">
+        </div>
         <div>
-            <a href="/settings" id="settings">
-                <span id="user_name">Your_name</span>
-                <img class="image-icon" src="img/settings.png" title="settings">
+            <span id="user-name">Your_name</span>
+            <a href="/settings" id="settings-a">
+                <img id="settings" class="image-icon" src="/static/img/settings.png" title="settings">
             </a>
         </div>
     </header>
 
-    <section class="main">
-        <div class="list_of_chats">
-            <button title=".">
-                <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
-                <div>
-                    <h2>Global chat</h2>
-                    <span>Nothing...</span>
-                </div>
-            </button>――――――――――――
-
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
+        <section class="main">
+            <button id="create-chat">
+                    <img src="https://cdn-icons-png.flaticon.com/128/10103/10103630.png" title="create">
             </button>
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button>
-            <button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button><button title=".">
-                <img class="chat-icon" src="img/directory.png" title="icon">
-                <div>
-                    <h2>second shit</h2>
-                    <span>long description</span>
-                </div>
-            </button>
-        </div>
-        <div class="chat">
-            <div class="chat-bar">
+            <div id="list-of-chats" class="list_of_chats">
+            </div>
+            <div id="chat" class="chat">
+                <div id="chat-bar" class="chat-bar">
                     <div>
-                        <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
-                        <span>Chat_name</span>
+                        <img id="chat-bar-back" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/271/271220.png" title="back">
+                        <div id="chat-bar-info">
+                            <img id="chat-avatar" class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/3083/3083741.png" title="icon">
+                            <span id="chat-name">Chat_name</span>
+                        </div>
                     </div>
                     <img class="chat-icon" src="https://cdn-icons-png.flaticon.com/128/2311/2311524.png" title="more">
-            </div>
+                </div>
 
-            <div class="input-div">
-                <input type="text" id="input" placeholder="Message">
-                <button title="attachment">
-                    <img src="https://cdn-icons-png.flaticon.com/128/9941/9941021.png" title="attachment">
-                </button>
-                <button title="send" id="send">
-                    <img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" title="send">
-                </button>
-            </div>
+                <div id="dialog" class="dialog">
+                </div>
 
-            <div class="dialog">
-                <div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <h6>17:40</h6>
-                </div>
-                <div class="capture">
-                    <img src="https://i.pinimg.com/736x/cb/7c/60/cb7c60d5297b483a9304b87eb3b7c527.jpg" title="capture">
-                    <span>Desctiption</span>
-                    <h6>17:41</h6>
-                </div>
-                <div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <h6>17:40</h6>
-                </div><div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <h6>17:40</h6>
-                </div><div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <h6>17:40</h6>
-                </div><div class="message">
-                    <h4>Hello everyonekkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk</h4>
-                    <h6>17:40</h6>
+                <div id="input-div" class="input-div">
+                    <div>
+                        <div id="chat-join">Join</div>
+                        <input type="text" id="input" placeholder="Message">
+                        <button id="minimize" title="minimize" style="display: none;">
+                            <img src="https://cdn-icons-png.flaticon.com/128/7787/7787505.png" title="minimize">
+                        </button>
+                        <button id="attach" title="attachment">
+                            <img src="https://cdn-icons-png.flaticon.com/128/9941/9941021.png" title="attachment" id="attach-img">
+                            <input type="file" id="attach-input" aria-label="dk" multiple style="display: none;">
+                        </button>
+                        <button title="send" id="send">
+                            <img src="https://cdn-icons-png.flaticon.com/128/9333/9333991.png" title="send">
+                        </button>
+                    </div>
+                    <div id="attach-menu" class="attach">
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-    <script src="js/chat.js"></script>
+        </section>
+    </div>
+    <script src="static/js/chat.js"></script>
 </body>
 </html>
