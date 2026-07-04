@@ -252,18 +252,21 @@ async def registration(response: Response, request: Request, user: Post_Session)
     if len(user.password) > 30:
         return {'ok': False, 'detail': "Password must be less than 30"}
     
+    print(user.password)
     try:
         answer = requests.get(f'https://ipinfo.io/{request.client.host}/json', timeout=3)
+
+        if not answer.ok:
+            print('Ошибка запроса к домену ipinfo.io')
+            country = None
+            region = None
+        else:
+            answer_json = answer.json()
+            country = answer_json.get('country')
+            region = answer_json.get('region')
     except:
-        pass
-    if not answer.ok:
-        print('Ошибка запроса к домену ipinfo.io')
         country = None
         region = None
-    else:
-        answer_json = answer.json()
-        country = answer_json.get('country')
-        region = answer_json.get('region')
 
     user_agent = request.headers.get('user-agent')
 
